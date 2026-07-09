@@ -234,9 +234,6 @@ Cross-Cutting:
 
 ## Risks
 
-|Risk|Likelihood|Impact|Mitigation|
-|...|Low|High|...|
-
 | Risk | Likelihood | Impact | Mitigation |
 | --- | --- | --- | --- |
 | ... | Low | High | ... |
