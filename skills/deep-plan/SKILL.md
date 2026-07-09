@@ -38,7 +38,7 @@ Choose workflow path based on epic complexity:
 
 | Feature | Quick Path (Simple Epic) | Full Path (Default) |
 |---------|---------------------------|---------------------|
-| **Complexity Criteria** | Small changes (≤ 3 work streams, 0 `CRITICAL` failure/security items expected) | Default for all other complex changes |
+| **Complexity Criteria** | Small changes (< 3 work streams, 0 `CRITICAL` failure/security items expected) | Default for all other complex changes |
 | **Workflow Steps** | Fallback to [quick-path.md](references/quick-path.md) (3-step workflow) | Full Deep-Plan Workflow (Phase 1 → 5) |
 | **User Checkpoints** | 1 checkpoint (Scope Brief) | 3 checkpoints (Scope, Review, Amendment) |
 | **Plan Format** | Single, living `plan.md` updated incrementally | Full detailed document + templates |
