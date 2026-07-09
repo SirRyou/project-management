@@ -35,7 +35,7 @@ Mark any PARTIAL FIT or MISFIT as requiring a scope conversation before Step 4 �
 ### [Item Name] — Failure Modes
 
 | # | Failure Mode | Trigger | Impact | Standard §Ref |
-|---|-------------|---------|--------|----------------------|
+| - | ------------ | ------- |------- | -------------------- |
 | F1 | [what fails] | [what causes it] | [what breaks] | §1.3 |
 ```
 
@@ -49,7 +49,7 @@ For every item that touches external input, auth, cross-tenant/cross-user state,
 ### [Item Name] — Security Risks
 
 | # | Risk | Trust Boundary Crossed | Adversarial Trigger | Impact | Standard §Ref |
-|---|------|------------------------|----------------------|--------|----------------------|
+| - | ---- | ---------------------- | ------------------- | ------ | -------------------- |
 | S1 | [what could be abused/leaked] | [where] | [what a malicious actor would send/do] | [blast radius] | §7.2 |
 ```
 
