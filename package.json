@@ -20,9 +20,6 @@
   ],
   "author": "ryou",
   "license": "MIT",
-  "scripts": {
-    "prepare": "chmod +x bin/install.mjs"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/SirRyou/project-management.git"
