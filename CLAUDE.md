@@ -81,3 +81,22 @@ Phases: Understand Scope → Enumerate Gaps → Draft Roadmap → Adversarial Re
 - **Tree of Work**: Only one ACTIVE task at a time. `validate` fails if 2+ are ACTIVE.
 - **Tree of Work**: Never commit secrets in state files. The script auto-redacts known patterns and blocks high-entropy strings.
 - **Deep Plan**: Never begin implementation without explicit user confirmation after Phase 5.
+
+## Skill routing
+
+When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+
+Key routing rules:
+- Product ideas/brainstorming → invoke /office-hours
+- Strategy/scope → invoke /plan-ceo-review
+- Architecture → invoke /plan-eng-review
+- Design system/plan review → invoke /design-consultation or /plan-design-review
+- Full review pipeline → invoke /autoplan
+- Bugs/errors → invoke /investigate
+- QA/testing site behavior → invoke /qa or /qa-only
+- Code review/diff check → invoke /review
+- Visual polish → invoke /design-review
+- Ship/deploy/PR → invoke /ship or /land-and-deploy
+- Save progress → invoke /context-save
+- Resume context → invoke /context-restore
+- Author a backlog-ready spec/issue → invoke /spec
