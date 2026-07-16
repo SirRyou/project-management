@@ -1,169 +1,135 @@
 # Project Management Skills for AI Agents
 
-A collection of agent skills for task tracking, context recovery, and complex feature planning. Designed to work with any AI coding agent that supports the [Agent Skills](https://agentskills.io) open standard.
+A collection of agent skills for task tracking, focus enforcement, debugging, and complex feature planning. Designed to work with any AI coding agent.
 
-## Overview
+## Skills
 
 | Skill | Purpose | Use When |
 |-------|---------|----------|
-| **[tree-of-work](skills/tree-of-work/)** | Hierarchical task tracking with context recovery | Managing multiple tasks, resuming sessions, coordinating sub-agents |
-| **[deep-plan](skills/deep-plan/)** | Resilient, security-aware feature planning | Planning medium-to-large features, complex architectural decisions |
+| **[tree-of-work](skills/tree-of-work/)** | Focus enforcement and context recovery | Multi-task work, session handoffs, preventing drift |
+| **[deep-plan](skills/deep-plan/)** | Security-aware feature planning | Planning features spanning multiple files or work streams |
+| **[investigate](skills/investigate/)** | Systematic debugging methodology | Bug reports, errors, regressions, "why is this broken" |
 
 ## Installation
 
 ### Claude Code (Plugin)
 
 ```bash
-# Add the marketplace
 /plugin marketplace add SirRyou/project-management
-
-# Install the plugin
 /plugin install project-management@project-management
 ```
 
-Skills are namespaced as `project-management:tree-of-work` and `project-management:deep-plan`.
-
 ### Any Agent (Manual)
-
-Clone and copy to your agent's skill directory:
 
 ```bash
 git clone https://github.com/SirRyou/project-management.git
 cp -r project-management/skills/* ~/.claude/skills/
 ```
 
-Or use `npx skills add` for cross-agent support:
+## Design Philosophy
 
-```bash
-npx skills add SirRyou/project-management --skill tree-of-work
-npx skills add SirRyou/project-management --skill deep-plan
-```
+These are **behavioral skills**, not tools. They tell agents how to think about problems — they don't impose specific file formats, directory structures, or CLI tools.
 
-## What Are Agent Skills?
-
-Agent skills are structured markdown files (`SKILL.md`) with YAML frontmatter that define behavioral specifications for AI agents. They tell agents **how** to approach problems, not **what** code to write. The format is an [open standard](https://agentskills.io) supported by 30+ agent platforms.
-
-Skills are:
-- **Portable**: Work across Claude Code, Cursor, Copilot, Codex, Gemini CLI, and more
+- **Portable**: Work across any agent runtime (Claude Code, Cursor, Copilot, Codex, Gemini CLI)
 - **Declarative**: Define triggers, rules, and workflows in markdown
-- **Composable**: Can be combined with other skills
-- **Stateful**: Can track state across sessions
+- **Runtime-agnostic**: Delegate persistence to platform-native tools
+- **Composable**: Load references on-demand, not in bulk
+
+Each skill declares what it needs from the runtime (`requires` and `capabilities` in frontmatter) and degrades gracefully when capabilities are missing.
 
 ## Skill Details
 
 ### Tree of Work
 
-Hierarchical task tracking with context recovery and sub-agent coordination.
+Focus enforcement and context recovery for agents.
 
-**Key Features:**
-- Ephemeral-first state tracking (in-memory until complexity triggers)
-- Automatic legacy doc absorption (ROADMAP.md, TODO.md)
-- Sub-agent isolation for parallel work
-- Secret detection via entropy analysis
-- Single ACTIVE task enforcement
+**Core rules:**
+- One ACTIVE task at all times
+- Park before switching tasks
+- Scope gate every change outside your current task
+- Update progress as you work, not at the end
 
-**How to Use:**
-- **Agent Invocation (Preferred):** Ask your AI agent to trigger it:
-  > *"where was I"* or *"initialize task tracking"*
-  The agent will automatically trigger the skill and execute commands.
-- **Manual CLI (For Developers):** Run from your project directory:
-  ```bash
-  # If installed globally / via plugin:
-  python ~/.claude/skills/project-management/tree-of-work/scripts/tree_of_work.py status
-
-  # If running inside this cloned repository:
-  python skills/tree-of-work/scripts/tree_of_work.py status
-  ```
-
-#### Sample State File (`.agent/tree-of-work/current-state.md`)
-```markdown
-# Agent State Snapshot
-
-## NOW
-
-- **Task:** [TASK-01] Implement oauth authentication
-- **Status:** ACTIVE
-- **Primary Files:** src/auth.py, src/config.py
-- **Latest Progress:** Set up OAuth2 flow and user session tokens.
-- **Next Concrete Step:** Add client validation middleware and test token expiration.
-
-## PARKED / BLOCKED
-
-- **Task:** [TASK-02] Setup Postgres database
-  - **Status:** PARKED
-  - **Reason:** Blocked by infra team provisioning DB credentials.
-  - **Resume Condition:** DB credentials available.
-
-## BRANCHES
-
-- **Issue:** Token expiration bug
-  - **Parent Task:** [TASK-01]
-  - **Priority:** High
-  - **Status:** ACTIVE
-```
+**Key references:**
+- `CLASSIFICATION.md` — PARKED vs BLOCKED decision tree, edge cases
+- `TRAPS.md` — Common focus drift traps with concrete mitigations
+- `ANTI_PATTERNS.md` — Substitution Test, silent branching, double-active
 
 → [Full Documentation](skills/tree-of-work/README.md)
 
 ### Deep Plan
 
-Resilient, problem-driven, security-aware feature planning.
+Phased planning with adversarial review for complex features.
 
-**Key Features:**
-- 5-phase workflow (Scope → Gaps → Draft → Review → Finalize)
-- Quick path for simple epics, full path for complex features
-- Adversarial review with "outside voice" principle
-- Progress persistence and plan versioning
-- Automatic escalation triggers
+**Workflow:**
+1. Understand Scope → 2. Enumerate Gaps (3 lenses) → 3. Draft Roadmap → 4. Adversarial Review → 5. Finalize
 
-**When to Use:**
-- Scope: >3 files affected
-- Complexity: Multiple independent work streams
-- Architecture: Design decisions or trust-boundary updates needed
-- Rollout: Phased delivery beneficial
+**Key features:**
+- Quick Path (3 steps) for simple epics, Full Path (5 phases) for complex ones
+- "Outside voice" adversarial review using different model providers
+- Problem-fit, resilience, and security analysis in parallel
+- Auto-escalation when complexity exceeds thresholds
 
 → [Full Documentation](skills/deep-plan/README.md)
+
+### Investigate
+
+Systematic debugging: trace from symptom to root cause, fix the cause, prove the fix.
+
+**Workflow:**
+1. Root Cause Investigation → 2. Pattern Analysis → 3. Hypothesis Testing → 4. Implementation → 5. Verification
+
+**Iron Law:** No fixes without root cause investigation first.
+
+**Key rules:**
+- 3-strike rule: if 3 hypotheses fail, escalate
+- Minimal diff: fewest files, fewest lines
+- Regression test must fail without fix and pass with fix
+- Never say "this should fix it" — verify and prove it
+
+→ [Full Documentation](skills/investigate/README.md)
 
 ## Project Structure
 
 ```
 project-management/
-├── .claude-plugin/
-│   ├── marketplace.json                    # Marketplace catalog
-│   └── plugin.json                         # Plugin manifest
 ├── skills/
-│   ├── tree-of-work/                       # Task tracking skill
+│   ├── tree-of-work/           # Focus enforcement
 │   │   ├── SKILL.md
-│   │   ├── scripts/                        # Python CLI tool
-│   │   ├── evals/                          # Tests
-│   │   └── references/                     # Context-specific guides
-│   └── deep-plan/                          # Feature planning skill
+│   │   ├── README.md
+│   │   └── references/         # Classification, traps, anti-patterns
+│   ├── deep-plan/              # Feature planning
+│   │   ├── SKILL.md
+│   │   ├── README.md
+│   │   ├── references/         # Phase-specific guides (9 files)
+│   │   └── templates/          # Roadmap template
+│   └── investigate/            # Debugging methodology
 │       ├── SKILL.md
-│       ├── references/                     # Phase-specific guides
-│       └── templates/                      # Roadmap templates
+│       ├── README.md
+│       └── runtime-bindings.md # Platform-specific glue template
+├── .claude-plugin/
+│   ├── marketplace.json
+│   └── plugin.json
 ├── README.md
 ├── CLAUDE.md
-├── LICENSE
-└── .gitignore
+└── LICENSE
 ```
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
+2. Create a feature branch
 3. Make your changes
 4. Test with your AI agent
 5. Submit a pull request
 
 ### Guidelines
 
-- **Skills**: Follow the existing SKILL.md format with YAML frontmatter
-- **Documentation**: Update README.md files when adding features
-- **Tests**: Add evals for new skill behaviors
+- Skills are behavioral specs in markdown, not executable code
+- Separate the methodology from runtime-specific infrastructure
+- Declare `requires` and `capabilities` in frontmatter
+- Keep references loadable on-demand, not in bulk
+- Total reference lines per session target: ~100-150
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Acknowledgments
-
-Built for the AI agent community. Special thanks to all contributors.
+MIT
