@@ -16,13 +16,31 @@ import { homedir } from 'node:os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILLS_SOURCE = join(__dirname, '..', 'skills');
-const DEST_BASE = join(homedir(), '.claude', 'skills');
-const VERSION_MARKER = join(DEST_BASE, '.pm-skills-version');
+
+const AGENTS = {
+  claude: {
+    name: 'Claude Code',
+    dest: join(homedir(), '.claude', 'skills'),
+  },
+  cursor: {
+    name: 'Cursor',
+    dest: join(homedir(), '.cursor', 'skills'),
+  },
+  codex: {
+    name: 'Codex',
+    dest: join(homedir(), '.codex', 'skills'),
+  },
+  gemini: {
+    name: 'Gemini CLI',
+    dest: join(homedir(), '.gemini', 'skills'),
+  },
+};
 
 const COMMANDS = {
-  install: 'Install skills to ~/.claude/skills/',
+  install: 'Install skills (--agent to target specific agent)',
   update: 'Update installed skills to latest version',
   check: 'Check if update is available',
+  agents: 'List supported agents and their paths',
   help: 'Show this help message',
 };
 
@@ -33,96 +51,132 @@ function getVersion() {
   return pkg.version;
 }
 
-function getInstalledVersion() {
-  if (existsSync(VERSION_MARKER)) {
-    return readFileSync(VERSION_MARKER, 'utf8').trim();
+function getInstalledVersion(dest) {
+  const marker = join(dest, '.pm-skills-version');
+  if (existsSync(marker)) {
+    return readFileSync(marker, 'utf8').trim();
   }
   return null;
 }
 
 function listSkills() {
   return readdirSync(SKILLS_SOURCE).filter(
-    (f) => !f.startsWith('.') && statSync(join(SKILLS_SOURCE, f)).isDirectory()
+    (f) =>
+      !f.startsWith('.') && statSync(join(SKILLS_SOURCE, f)).isDirectory()
   );
 }
 
-function copySkills() {
-  if (!existsSync(DEST_BASE)) {
-    mkdirSync(DEST_BASE, { recursive: true });
+function copySkills(dest) {
+  if (!existsSync(dest)) {
+    mkdirSync(dest, { recursive: true });
   }
 
   const skills = listSkills();
   for (const skill of skills) {
     const src = join(SKILLS_SOURCE, skill);
-    const dest = join(DEST_BASE, skill);
+    const skillDest = join(dest, skill);
 
-    // Remove existing (file or directory) before copying
-    if (existsSync(dest)) {
-      rmSync(dest, { recursive: true, force: true });
+    if (existsSync(skillDest)) {
+      rmSync(skillDest, { recursive: true, force: true });
     }
 
-    cpSync(src, dest, { recursive: true });
+    cpSync(src, skillDest, { recursive: true });
   }
 
-  writeFileSync(VERSION_MARKER, getVersion());
+  writeFileSync(join(dest, '.pm-skills-version'), getVersion());
+}
+
+function parseArgs(args) {
+  const result = { command: 'help', agents: [] };
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--agent' && args[i + 1]) {
+      result.agents.push(args[++i]);
+    } else if (!args[i].startsWith('-')) {
+      result.command = args[i];
+    }
+  }
+
+  return result;
 }
 
 function main() {
-  const args = process.argv.slice(2);
-  const command = args[0] || 'help';
+  const { command, agents: targetAgents } = parseArgs(process.argv.slice(2));
+
+  // Default to all agents if none specified
+  const targets =
+    targetAgents.length > 0
+      ? targetAgents
+      : Object.keys(AGENTS);
 
   switch (command) {
     case 'install':
     case 'update': {
       const version = getVersion();
-      const installed = getInstalledVersion();
       const skills = listSkills();
 
-      if (command === 'update' && !installed) {
-        console.log('No existing installation found. Running install...\n');
-      }
-
-      if (command === 'install' && installed) {
-        console.log(
-          `Already installed (v${installed}). Running update...\n`
-        );
-      }
-
-      console.log(`📦 pm-skills v${version}\n`);
+      console.log(`\n📦 skill-library v${version}\n`);
       console.log('Skills:');
-
       for (const skill of skills) {
         console.log(`  ✓ ${skill}`);
       }
 
-      copySkills();
+      console.log('\nInstalling to:');
 
-      console.log(`\n✅ Installed to ${DEST_BASE}`);
-      console.log('\nRestart your Claude Code session to load them.\n');
+      for (const agentKey of targets) {
+        const agent = AGENTS[agentKey];
+        if (!agent) {
+          console.log(`  ⚠️  Unknown agent: ${agentKey}`);
+          continue;
+        }
+
+        const installed = getInstalledVersion(agent.dest);
+
+        if (command === 'install' && installed) {
+          console.log(
+            `\n  ${agent.name} (already installed v${installed}, updating...)`
+          );
+        } else {
+          console.log(`\n  ${agent.name}`);
+        }
+
+        copySkills(agent.dest);
+        console.log(`  ✅ ${agent.dest}`);
+      }
+
+      console.log('\nRestart your agent session to load skills.\n');
       break;
     }
 
     case 'check': {
       const version = getVersion();
-      const installed = getInstalledVersion();
 
-      console.log('\n📦 pm-skills\n');
-      console.log(`  Package version:   ${version}`);
-      console.log(
-        `  Installed version: ${installed || 'not installed'}`
-      );
+      console.log(`\n📦 skill-library v${version}\n`);
 
-      if (!installed) {
-        console.log(
-          '\n  Run: npx @sirryou/skill-library install\n'
-        );
-      } else if (installed === version) {
-        console.log('\n  ✅ Up to date.\n');
-      } else {
-        console.log(
-          '\n  ⚠️  Update available. Run: npx @sirryou/skill-library update\n'
-        );
+      for (const agentKey of targets) {
+        const agent = AGENTS[agentKey];
+        if (!agent) continue;
+
+        const installed = getInstalledVersion(agent.dest);
+        const status = !installed
+          ? 'not installed'
+          : installed === version
+            ? '✅ up to date'
+            : `⚠️  v${installed} → v${version} available`;
+
+        console.log(`  ${agent.name.padEnd(12)} ${status}`);
       }
+
+      console.log('');
+      break;
+    }
+
+    case 'agents': {
+      console.log('\nSupported agents:\n');
+      for (const [key, agent] of Object.entries(AGENTS)) {
+        console.log(`  ${key.padEnd(10)} ${agent.name.padEnd(14)} → ${agent.dest}`);
+      }
+      console.log('\nUsage: npx @sirryou/skill-library install --agent claude\n');
       break;
     }
 
@@ -130,15 +184,21 @@ function main() {
     case '--help':
     case '-h':
     default: {
-      console.log(`\n📦 pm-skills v${getVersion()}\n`);
+      console.log(`\n📦 skill-library v${getVersion()}\n`);
       console.log(
-        'Usage: npx @sirryou/skill-library <command>\n'
+        'Usage: npx @sirryou/skill-library <command> [--agent <name>]\n'
       );
       console.log('Commands:');
       for (const [cmd, desc] of Object.entries(COMMANDS)) {
         console.log(`  ${cmd.padEnd(10)} ${desc}`);
       }
-      console.log('');
+      console.log('\nAgents:');
+      for (const [key, agent] of Object.entries(AGENTS)) {
+        console.log(`  ${key.padEnd(10)} ${agent.name}`);
+      }
+      console.log(
+        '\nIf no --agent specified, installs to all agents.\n'
+      );
       break;
     }
   }
