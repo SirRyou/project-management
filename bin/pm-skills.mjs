@@ -114,13 +114,13 @@ function main() {
 
       if (!installed) {
         console.log(
-          '\n  Run: npx @sirryou/project-management install\n'
+          '\n  Run: npx @sirryou/skill-library install\n'
         );
       } else if (installed === version) {
         console.log('\n  ✅ Up to date.\n');
       } else {
         console.log(
-          '\n  ⚠️  Update available. Run: npx @sirryou/project-management update\n'
+          '\n  ⚠️  Update available. Run: npx @sirryou/skill-library update\n'
         );
       }
       break;
@@ -132,7 +132,7 @@ function main() {
     default: {
       console.log(`\n📦 pm-skills v${getVersion()}\n`);
       console.log(
-        'Usage: npx @sirryou/project-management <command>\n'
+        'Usage: npx @sirryou/skill-library <command>\n'
       );
       console.log('Commands:');
       for (const [cmd, desc] of Object.entries(COMMANDS)) {

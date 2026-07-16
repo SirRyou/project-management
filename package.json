@@ -1,5 +1,5 @@
 {
-  "name": "@sirryou/project-management",
+  "name": "@sirryou/skill-library",
   "version": "2.1.0",
   "description": "Install and update project-management skills for AI coding agents",
   "type": "module",

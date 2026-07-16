@@ -32,13 +32,13 @@ cp -r project-management/skills/* ~/.claude/skills/
 
 ```bash
 # First time install
-npx @sirryou/project-management install
+npx @sirryou/skill-library install
 
 # Check for updates
-npx @sirryou/project-management check
+npx @sirryou/skill-library check
 
 # Update to latest
-npx @sirryou/project-management update
+npx @sirryou/skill-library update
 ```
 
 ### Claude Code (Plugin)
