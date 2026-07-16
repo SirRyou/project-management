@@ -6,16 +6,16 @@ Hand finalized roadmap to execution. Three rules: isolation, task unit format, i
 
 ## 1. Opt-In
 
-Handoff optional. Confirm with user after roadmap finalized:
+Handoff optional. After roadmap finalized, confirm with user:
 
-```
-ask_question(
-  question="Roadmap finalized. Hand off to execution or stop for manual review?",
-  options=["Hand off to execution", "Stop here"]
-)
-```
+> Roadmap finalized. Hand off to execution or stop for manual review?
+>
+> A) Hand off to execution
+> B) Stop here
 
 Declined → stop. Finalized roadmap = final deliverable.
+
+---
 
 ## 2. Isolation Rule
 
@@ -49,7 +49,7 @@ Bare task titles = agent stalls or drifts. Always include steps, exit criteria, 
 
 ## 4. Implementation Review
 
-After sprint/WS implementation completes, verify against plan requirements:
+After sprint/work stream implementation completes, verify against plan requirements:
 
 - Exit criteria met?
 - Sad paths handled?
@@ -61,12 +61,9 @@ Gaps → flag for rework. Match implementation to plan, not plan to implementati
 
 ---
 
-
----
-
 ## Anti-Patterns
 
-- **Auto-chaining** — starting implementation immediately after Step 7. Skips user review.
+- **Auto-chaining** — starting implementation immediately after Phase 5. Skips user review.
 - **Batched execution** — handing off high-level roadmap without expanded task units.
 - **Same context** — writing code in planning session. Wastes tokens.
 - **Bare titles** — delegating task list without steps/exit criteria/sad paths.

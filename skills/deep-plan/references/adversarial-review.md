@@ -6,51 +6,20 @@ Brutal review of draft plan before finalization. Two passes: CTO lens, Eng lens.
 
 ## 1. Detect Review Path
 
-```bash
-command -v claude  && AGENT=claude
-command -v codex   && AGENT=codex
-command -v agy     && AGENT=agy
-command -v aider  && AGENT=aider
-command -v opencode && AGENT=opencode
-command -v mentat && AGENT=mentat
-command -v ollama && AGENT=ollama
-```
-
-PowerShell fallback (Windows-native only):
-
-```powershell
-Get-Command claude, codex, agy, opencode, ollama -ErrorAction SilentlyContinue
-```
-
-Priority: provider **different from plan-drafting model** first.
-
-### Invocation
-
-| CLI | Invocation | Notes |
-|:---|:---|:---|
-| `claude` | `claude -p "<prompt>"` | Anthropic |
-| `codex` | `codex exec "<prompt>"` | OpenAI one-shot |
-| `aider` | `aider --model <model-name>` | Multi-provider open-source coding agent supporting OpenAI, Anthropic, and local models. |
-| `agy` | `agy -p "<prompt>"` | Google's Antigravity CLI. |
-| `opencode` | `opencode run "<prompt>"` | Multi-provider, model via config |
-| `mentat` | `mentat <paths-to-files>` | Context-driven multi-file AI coding assistant focused on workspace directory context. |
-| `ollama` | `ollama run <model> "<prompt>"` | Orchestrator for serving and running open-weights LLMs locally from the terminal. |
-
-Pipe draft plan inline or as file content within prompt.
+Check for CLI models available on the system. Priority: use a model **different from the one that drafted the plan** — different training catches different blind spots.
 
 ### Path Selection
 
-- **CLI found** → ask permission to use directly. Strongest outside voice — different training, different blind spots. dont forget add timed out.
-- **No CLI** → spawn subagent with different model override if available.
-- **No other model** → spawn same-model subagent (fresh context). **Warn user**: "No other model provider detected. Review uses same-model subagent — bias caveat applies. Findings may reflect same training blind spots."
+- **Different-model CLI available** → use it directly. Strongest outside voice.
+- **No different-model CLI** → spawn subagent with different model provider if available.
+- **No other model at all** → spawn same-model subagent with fresh context. Warn user: "No other model provider detected. Review uses same-model — bias caveat applies. Findings may reflect same training blind spots."
 
-### Known Issue
+### Timeout handling
 
-- `outside voice` cant read plan -> permission error.
-- no output/response in terminal:
-  - timed out -> longer timed out, try 150+
-  - use interactive mode & tell to write file somewhere so you can read.
-  - credit usage empty -> fallback other or subagent.
+CLI tools may time out on large plans. If no output received:
+1. Increase timeout (150s+)
+2. Try interactive mode — have the reviewer write findings to a file you can read
+3. If credits exhausted, fall back to subagent
 
 ---
 
@@ -113,20 +82,14 @@ Here is the plan:
 
 After both passes, confirm with user:
 
-```
-ask_question(
-  question="Review passes complete. Check findings above.",
-  options=[
-    "Findings correct. Proceed to amendment compilation.",
-    "Need to modify or reject some findings."
-  ]
-)
-```
+> Review passes complete. Check findings above.
+>
+> A) Findings correct. Proceed to amendment compilation.
+> B) Need to modify or reject some findings.
 
 ### 4.1 Modifying the plan
 
-- if user want modify or reject, discuss it and ask why.
-- done resolving it? run review checkpoint
+If user wants to modify or reject findings, discuss and ask why. Once resolved, re-present for confirmation.
 
 ---
 
@@ -146,21 +109,16 @@ From Eng Review:
 
 Confirm with user:
 
-```
-ask_question(
-  question="Amendment list correct? Override or add anything?",
-  options=[
-    "Correct. Write final roadmap.",
-    "Need changes to amendment list."
-  ]
-)
-```
+> Amendment list correct? Override or add anything?
+>
+> A) Correct. Write final roadmap.
+> B) Need changes to amendment list.
 
 User requests changes → update draft, present again, repeat checkpoint.
 
 ---
 
-## 6. Combined Pass (Quick Path / NO_OTHER_MODEL)
+## 6. Combined Pass (Quick Path / No Other Model)
 
 If Quick Path or no other model available → merge CTO + Eng into single pass:
 
@@ -186,10 +144,10 @@ Here is the plan:
 
 ## 7. Conditional — UI/UX Lens
 
-If scope has UI/frontend/mockup/component work → invoke related UI review skill if available, no? use (`references/emil-design-eng/SKILL.md`). Findings additive to amendment list.
+If scope has UI/frontend/mockup/component work → run the UI review checklist from `references/ui-review.md`. Findings are additive to the amendment list.
 
 ---
 
 ## 8. Tool Fallback
 
-Any helper missing or fails → fall back to manual or skip if not critical to final plan.
+Any helper missing or fails → fall back to manual review or skip if not critical to final plan.

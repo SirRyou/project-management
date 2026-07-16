@@ -27,7 +27,7 @@ Use this skill when:
    - **In Scope** / **Out of Scope** items.
    - **Invariants**: System guarantees that must not break.
    - **Trust Boundaries**: Where untrusted data enters or boundaries are crossed.
-3. **Checkpoint**: Present the Scope Brief to the user and request confirmation using the native `ask_question` tool. Do not proceed until approved.
+3. **Checkpoint**: Present the Scope Brief to the user and confirm before proceeding. Do not proceed until approved.
 
 ---
 

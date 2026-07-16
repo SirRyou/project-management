@@ -163,7 +163,7 @@ For small changes (≤3 work streams, 0 CRITICAL items expected):
 3. Living `plan.md`
 
 **Auto-Escalate Conditions**:
-- Step 2 yields MISFIT or CRITICAL items
+- Phase 2 yields MISFIT or CRITICAL items
 - Total scope exceeds 15 tasks
 
 ### Full Path (Default)
@@ -190,7 +190,7 @@ Phase 4 → Phase 2 if:
 
 ### Parallel Execution
 - Phase 2: All three lenses run in parallel per item
-- Phase 4: Steps 5 and 6 run parallel if different reviewers available
+- Phase 4: CTO and Eng review passes run parallel if different reviewers available
 
 ## Special Considerations
 
