@@ -22,13 +22,6 @@ No build step required. Skills are behavioral specifications in markdown, not ex
 3. Verify the agent follows the workflow correctly
 4. Test edge cases and error conditions
 
-### Running Evals
-
-```bash
-# Tree of Work evals + integration tests
-python skills/tree-of-work/evals/test_runner.py
-```
-
 ## Skill Guidelines
 
 ### File Structure

@@ -62,12 +62,13 @@ Delegate persistence to your platform's native tools (task tracker, memory files
 tree-of-work/
 ├── SKILL.md                    # Behavioral spec (the skill)
 ├── README.md                   # This file
-├── references/
-│   ├── CLASSIFICATION.md       # Status decision tree + edge cases
-│   ├── TRAPS.md                # Focus drift traps + mitigations
-│   ├── ANTI_PATTERNS.md        # Anti-patterns catalog
-│   └── SUBAGENTS.md            # Delegation protocol
-└── evals/                      # Test suite
+├── scripts/
+│   └── tree_of_work.py         # Python CLI tool
+└── references/
+    ├── CLASSIFICATION.md       # Status decision tree + edge cases
+    ├── TRAPS.md                # Focus drift traps + mitigations
+    ├── ANTI_PATTERNS.md        # Anti-patterns catalog
+    └── SUBAGENTS.md            # Delegation protocol
 ```
 
 ## License

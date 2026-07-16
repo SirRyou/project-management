@@ -17,12 +17,14 @@ project-management/
 │   ├── tree-of-work/                       # Task tracking skill
 │   │   ├── SKILL.md
 │   │   ├── scripts/                        # Python CLI tool
-│   │   ├── evals/                          # Tests
 │   │   └── references/                     # Context-specific guides
-│   └── deep-plan/                          # Feature planning skill
+│   ├── deep-plan/                          # Feature planning skill
+│   │   ├── SKILL.md
+│   │   ├── references/                     # Phase-specific guides
+│   │   └── templates/                      # Roadmap templates
+│   └── investigate/                        # Debugging skill
 │       ├── SKILL.md
-│       ├── references/                     # Phase-specific guides
-│       └── templates/                      # Roadmap templates
+│       └── runtime-bindings.md             # Platform-specific glue template
 └── .agents/                                # Cavecrew skills (separate)
 ```
 
@@ -49,13 +51,6 @@ python skills/tree-of-work/scripts/tree_of_work.py reset
 
 # Override state directory
 python skills/tree-of-work/scripts/tree_of_work.py --state-dir PATH <command>
-```
-
-### Running Tests
-
-```bash
-# Tree of Work evals + integration tests
-python skills/tree-of-work/evals/test_runner.py
 ```
 
 ## Architecture & Design Decisions
