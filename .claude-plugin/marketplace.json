@@ -3,13 +3,13 @@
   "owner": {
     "name": "ryou"
   },
-  "description": "Project management skills for AI agents — task tracking and feature planning",
+  "description": "Project management skills for AI agents — task tracking, feature planning, and systematic debugging",
   "plugins": [
     {
       "name": "project-management",
       "source": ".",
-      "description": "Task tracking with context recovery (tree-of-work) and resilient feature planning (deep-plan)",
-      "version": "2.0.0"
+      "description": "Task tracking with context recovery (tree-of-work), resilient feature planning (deep-plan), and systematic debugging (investigate)",
+      "version": "2.1.0"
     }
   ]
 }

@@ -138,19 +138,11 @@ Comprehensive documentation for each skill follows the [Diataxis framework](http
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test with your AI agent
-5. Submit a pull request
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute.
 
-### Guidelines
+## Changelog
 
-- Skills are behavioral specs in markdown, not executable code
-- Separate the methodology from runtime-specific infrastructure
-- Declare `requires` and `capabilities` in frontmatter
-- Keep references loadable on-demand, not in bulk
-- Total reference lines per session target: ~100-150
+See [CHANGELOG.md](CHANGELOG.md) for a list of changes.
 
 ## License
 

@@ -1,8 +1,8 @@
 {
   "name": "project-management",
   "displayName": "Project Management Skills",
-  "version": "2.0.0",
-  "description": "Task tracking with context recovery (tree-of-work) and resilient feature planning (deep-plan) for AI coding agents",
+  "version": "2.1.0",
+  "description": "Task tracking with context recovery (tree-of-work), resilient feature planning (deep-plan), and systematic debugging (investigate) for AI coding agents",
   "author": {
     "name": "ryou"
   },
@@ -12,9 +12,11 @@
   "keywords": [
     "task-tracking",
     "planning",
+    "debugging",
     "project-management",
     "context-recovery",
     "sub-agents",
-    "roadmap"
+    "roadmap",
+    "root-cause-analysis"
   ]
 }
