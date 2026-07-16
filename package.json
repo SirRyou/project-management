@@ -1,0 +1,30 @@
+{
+  "name": "@sirryou/project-management",
+  "version": "2.1.0",
+  "description": "Install and update project-management skills for AI coding agents",
+  "type": "module",
+  "bin": {
+    "pm-skills": "./bin/install.mjs"
+  },
+  "files": [
+    "bin/",
+    "skills/",
+    ".claude-plugin/"
+  ],
+  "keywords": [
+    "claude",
+    "ai-agent",
+    "skills",
+    "task-tracking",
+    "planning"
+  ],
+  "author": "ryou",
+  "license": "MIT",
+  "scripts": {
+    "prepare": "chmod +x bin/install.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SirRyou/project-management.git"
+  }
+}

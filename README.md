@@ -26,6 +26,44 @@ git clone https://github.com/SirRyou/project-management.git
 cp -r project-management/skills/* ~/.claude/skills/
 ```
 
+## Updating
+
+### npx (Recommended)
+
+```bash
+# First time install
+npx @sirryou/project-management install
+
+# Check for updates
+npx @sirryou/project-management check
+
+# Update to latest
+npx @sirryou/project-management update
+```
+
+### Claude Code (Plugin)
+
+```bash
+/plugin uninstall project-management
+/plugin install project-management@project-management
+```
+
+### Manual
+
+```bash
+cd project-management
+git pull origin master
+cp -r skills/* ~/.claude/skills/
+```
+
+### Publishing Updates (Maintainers)
+
+```bash
+# Bump version in package.json and plugin.json
+npm version patch  # or minor, major
+npm publish --access public
+```
+
 ## Design Philosophy
 
 These are **behavioral skills**, not tools. They tell agents how to think about problems — they don't impose specific file formats, directory structures, or CLI tools.
