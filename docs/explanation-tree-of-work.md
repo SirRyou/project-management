@@ -116,10 +116,17 @@ Some task trackers allow multiple active items. Tree of Work rejects this becaus
 
 ### File-Based State
 
-Some skills enforce a specific file format (e.g., `.tree-of-work/state.md`). Tree of Work rejects this because:
-- File formats change
-- Directory structures vary
-- The skill should be portable
+Tree of Work now uses a state file at `.agent/tree-of-work/current-state.md`, managed by a Python CLI (`skills/tree-of-work/scripts/tree_of_work.py`). The earlier design rejected file-based state for portability. The implementation reversed this because:
+
+- **Ephemeral-only doesn't survive context compaction.** When the agent's context window fills, in-memory state is lost. A state file survives.
+- **Cross-session recovery needs a durable artifact.** "Where was I?" requires reading a file, not hoping the agent remembers.
+- **The CLI enforces the Iron Law mechanically.** `validate` fails if 2+ tasks are ACTIVE — something behavioral rules can't guarantee.
+
+**What we gained:** Survives context compaction, mechanical enforcement, audit trail via snapshots.
+
+**What we lost:** Portability across runtimes (the CLI is Python-specific), format is now fixed, directory structure is now enforced.
+
+The behavioral-vs-tool trade-off shifted: the tool won because the agent's context window is the real constraint, not runtime portability.
 
 ### Automatic Enforcement
 
@@ -135,3 +142,38 @@ Some tools automatically prevent scope drift (e.g., git hooks, linters). Tree of
 3. **Adapt to the user**: Don't force a format. Match the user's level of organization.
 4. **Trust git**: Git is the source of truth. State files are convenience, not truth.
 5. **Be mechanical**: The Scope Gate Test is mechanical (no judgment required). This makes it reliable.
+
+## Limitations
+
+### Branching Workflows
+
+The skill works well for linear work: one task, do it, done. It breaks down when the user has 3+ concurrent threads — a common real-world scenario:
+
+```
+Main goal: onboarding feature
+├── Frontend (DONE)
+├── API backend (PARKED: waiting on DB)
+├── DB fix (DONE → "checkpoint")
+└── Security fix (spawned from API problem)
+```
+
+At the "checkpoint" moment, the state file is flat: one ACTIVE task, a list of PARKED items with no hierarchy. The user wants to save branch B's context and resume it later. The skill can't help because:
+
+1. **No branch-scoped snapshots.** `snapshot` archives the whole state file, not a branch. You can't save "the API backend branch" independently.
+2. **No branch navigation.** There's no `switch api-backend` command. The PARKED list is flat — you manually read each item and decide.
+3. **No branch relationships.** The state file doesn't record that "API backend" was parked because "DB fix" was blocking it. When DB is done, the user has to remember which parked task to activate.
+4. **Resume requires re-scanning.** When loading a new session with 5 parked tasks, the skill says "begin from the last Next Concrete Step" — but which task? The skill doesn't pick for you.
+
+### What Would Fix This
+
+A branching workflow needs:
+- **Branch-scoped snapshots:** `snapshot --branch api-backend` saves that branch's context (current files, progress, next step, why parked) to a named location.
+- **Branch navigation:** `switch api-backend` saves current branch, loads target, updates state file.
+- **Branch tree visualization:** `status --tree` shows the hierarchy.
+- **Resume from checkpoint:** `resume api-backend` loads just that branch without scanning the whole codebase.
+
+This is a significant feature addition. The current skill is designed for linear work; branching would require a tool layer on top of the behavioral framework.
+
+### The Ephemeral Tension
+
+The skill says "ephemeral first" but also needs persistent state to survive context compaction. These contradict. The implementation resolved this by using a state file — but the explanation doc still says "favors ephemeral tracking." The reality: the state file is the primary artifact, and ephemeral tracking is the fallback for simple cases.

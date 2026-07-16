@@ -61,11 +61,13 @@ Every skill is a `SKILL.md` with YAML frontmatter (`name`, `description`, `licen
 
 ### Tree of Work — Ephemeral-First Design
 
-State tracking starts in-memory and only materializes to disk when complexity triggers fire (branching, task transitions, sub-agent handoff, session end). The state file (`.agent/tree-of-work/current-state.md`) enforces exactly one ACTIVE task at a time.
+State tracking starts in-memory and materializes to `.agent/tree-of-work/current-state.md` when complexity triggers fire (branching, task transitions, sub-agent handoff, session end). The state file enforces exactly one ACTIVE task at a time.
 
 The Python CLI handles: initialization, validation (including secret detection via Shannon entropy), snapshots, and legacy doc absorption.
 
 Reference files under `skills/tree-of-work/references/` are loaded on-demand only when specific conditions are met — never bulk-load them. Total lines per session target: ~100-150.
+
+**Known limitation — branching workflows:** The state file is flat (one ACTIVE, a list of PARKED). It works for linear work but breaks down with 3+ concurrent threads. No branch-scoped snapshots, no branch navigation, no branch relationships. See [explanation-tree-of-work.md](docs/explanation-tree-of-work.md#limitations) for details.
 
 ### Deep Plan — 5-Phase Workflow
 
@@ -83,6 +85,7 @@ Comprehensive documentation is available in the `docs/` directory, following the
 
 - **Tree of Work**: Only one ACTIVE task at a time. `validate` fails if 2+ are ACTIVE.
 - **Tree of Work**: Never commit secrets in state files. The script auto-redacts known patterns and blocks high-entropy strings.
+- **Tree of Work**: Branching workflows (3+ concurrent threads) are not well-supported. The state file is flat — no branch-scoped snapshots, no branch navigation. For complex multi-threaded work, use git branches + manual context notes instead of relying on the state file.
 - **Deep Plan**: Never begin implementation without explicit user confirmation after Phase 5.
 
 ## Skill routing

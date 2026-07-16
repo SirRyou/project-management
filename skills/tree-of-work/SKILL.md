@@ -1,19 +1,15 @@
 ---
 name: tree-of-work
 description: >
-  Focus enforcement and context recovery for agents. Keeps one active task,
-  prevents drift, preserves context across sessions. Activate on "where was I",
-  "what's next", "I'm lost", "resume", or any multi-step work.
+  Focus lock for agents. One active task, state on disk, context recovery
+  across sessions. Activate on "where was I", "what's next", "I'm lost",
+  "resume", or any multi-step work.
 triggers:
   - "where was I"
   - "what's next"
   - "I'm lost"
-  - "lost track"
   - "resume"
-  - "organize work"
-  - "break down this task"
   - "track progress"
-  - "task breakdown"
 requires:
   - file-read
   - file-write
@@ -71,6 +67,58 @@ A task is NOT DONE until all are true:
 4. Progress notes reflect what was actually done
 
 If the user says "this is done, move on" without testing, mark it `DONE (untested — user confirmed)` and log the gap.
+
+## State on Disk
+
+The mental model above materializes in one file: `.agent/tree-of-work/current-state.md`. This is the single source of truth for what the agent is doing, what's parked, and what's done.
+
+### State file structure
+
+```markdown
+## NOW
+- **Task:** [TASK-01] Implement auth
+- **Status:** ACTIVE
+- **Primary Files:** src/auth.ts, src/middleware.ts
+- **Latest Progress:** JWT validation complete, refresh token flow half-done.
+- **Next Concrete Step:** Add token rotation in src/auth.ts:87
+
+## PARKED / BLOCKED
+- [TASK-02] Billing integration — PARKED: auth must land first
+
+## BRANCHES
+(None)
+
+## VALIDATION
+- Unit Tests: PASS
+- Lint: PASS
+- Build: PASS
+```
+
+### How the user sees it
+
+Run the CLI to check state without opening the file:
+
+```bash
+python skills/tree-of-work/scripts/tree_of_work.py status
+```
+
+This prints the current ACTIVE task, PARKED/BLOCKED items, and branches. Use `--json` for machine-readable output.
+
+### How completed work accumulates
+
+When the agent marks a task DONE, it stays in the state file until the next `snapshot`. Snapshots archive the current state to `.agent/tree-of-work/history/` with a timestamp, so the user has a trail of what was done and when:
+
+```bash
+python skills/tree-of-work/scripts/tree_of_work.py snapshot -m "auth module complete"
+```
+
+### Saving and loading across sessions
+
+**When context nears capacity:** The agent should snapshot current state before compaction. The snapshot preserves progress, next steps, and parked tasks so the next session can pick up.
+
+**When starting a new session:** The agent reads `.agent/tree-of-work/current-state.md` and picks up from the last `Next Concrete Step`. If the state file is stale (git history diverged), trust git and update the state to match reality.
+
+**When the user wants a fresh start:** `init` scans for legacy files (TODO.md, ROADMAP.md, CLAUDE.md) and absorbs them into the state file. `reset` returns to the default template.
 
 ## Context Recovery
 
@@ -164,7 +212,7 @@ This skill **enforces focus**. It does not:
 - Create roadmaps or project timelines
 - Replace your platform's built-in task tracking
 
-It tells the agent **how to think**, not where to write files. Delegate persistence to your platform's native tools.
+It tells the agent **how to think** and **where state lives** (`.agent/tree-of-work/current-state.md`). Delegate persistence to the CLI, not ad-hoc files.
 
 ## Completion Status
 

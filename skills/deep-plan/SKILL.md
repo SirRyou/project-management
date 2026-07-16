@@ -1,13 +1,12 @@
 ---
 name: deep-plan
 description: >
-  Planning for features spanning >3 files, multiple work streams, or
-  architectural decisions. Produces a phased, adversarial-reviewed roadmap.
+  Adversarial-reviewed roadmap for multi-file features. Phased planning
+  with scope analysis, gap enumeration, and outside-voice review.
   NOT for trivial changes, single-file edits, or simple bug fixes.
 triggers:
   - "plan this feature"
   - "design an epic"
-  - "architectural planning"
   - "break down this work"
   - "create a roadmap"
 requires:
@@ -71,7 +70,7 @@ Read scope source (`STATE.md`, `ROADMAP.md`, or equivalent). Extract: epic name,
 Analyze under three lenses (parallel if possible):
 
 1. **Problem-Fit**: Does the literal request fully solve the underlying problem?
-2. **Resilience**: Failure modes — timeouts, concurrency, duplicate calls, partial updates. Includes command-line machine verification assertions.
+2. **Resilience**: Failure modes — timeouts, concurrency, duplicate calls, partial updates. Includes command-line machine verification assertions. *For resilience standards: [resilience-first-development.md](references/resilience-first-development.md)*
 3. **Security**: Input abuse, missing permission checks, exposed secrets. Includes defense contracts.
 
 Tag each gap: `FIT`, `MISFIT`, or `CRITICAL`.
@@ -87,6 +86,8 @@ Construct tentative roadmap. Work streams with tasks, dependencies, exit criteri
 
 ### Phase 4: Adversarial Review
 
+**Skip gate:** Phase 4 is skipped when Phase 2 yielded all `FIT`, 0 `CRITICAL`, and <=5 total gaps. Otherwise, run the review.
+
 Run review using "outside voice" — different training perspectives catch blind spots.
 
 Priority order:
@@ -94,13 +95,13 @@ Priority order:
 2. Subagent with different model provider
 3. Same-model subagent (must include explicit counter-bias checklist)
 
-Skip Phase 4 if Phase 2 yielded all `FIT`, 0 `CRITICAL`, and <=5 total gaps.
-
 *Detailed guide: [adversarial-review.md](references/adversarial-review.md)*
 
 ### Phase 5: Finalize Roadmap
 
 Generate final roadmap. **STOP. Do not begin implementation without explicit user confirmation.**
+
+After confirmation, hand off to execution: *Guide: [execution-handoff.md](references/execution-handoff.md)*
 
 *Quality gates: [quality-gates.md](references/quality-gates.md)*
 

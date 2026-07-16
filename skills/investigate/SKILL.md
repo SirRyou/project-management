@@ -1,15 +1,14 @@
 ---
 name: investigate
 description: >
-  Systematic debugging: trace from symptom to root cause, design structural fixes,
-  and promote learnings to prevent recurrence.
+  Root cause investigation for bugs and regressions. Traces symptoms back
+  to source, verifies the hypothesis, and designs structural fixes.
   NOT for feature work, refactors, or greenfield coding.
 triggers:
   - "debug this"
   - "fix this bug"
   - "why is this broken"
   - "investigate this error"
-  - "root cause analysis"
   - stack traces
   - unexpected behavior
 requires:
@@ -28,9 +27,9 @@ capabilities:
 
 ## Iron Law
 
-**NO FIXES WITHOUT ROOT CAUSE INVESTIGATION AND INVARIANT VERIFICATION.**
+**NO FIXES WITHOUT ROOT CAUSE INVESTIGATION.**
 
-Speculative patching (e.g. adding quick `try-catch` blocks, local null guards, or bypassing auth) is strictly prohibited. You must trace data flow back to the root cause before editing code.
+Speculative patching — adding quick `try-catch` blocks, local null guards, or bypassing auth — is strictly prohibited. You must trace data flow back to the root cause before editing code. Every fix is verified against repository invariants before it lands (Phase 5).
 
 ---
 
