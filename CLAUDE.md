@@ -76,6 +76,14 @@ Reference files under `skills/tree-of-work/references/` are loaded on-demand onl
 
 Phases: Understand Scope → Enumerate Gaps → Draft Roadmap → Adversarial Review → Finalize Roadmap. The skill supports quick path (simple epics) vs full path, with auto-escalation triggers. Phase 4 uses an "outside voice" principle — different model providers for adversarial review to catch blind spots.
 
+## Documentation
+
+Comprehensive documentation is available in the `docs/` directory, following the [Diataxis framework](https://diataxis.fr/):
+
+- **Tree of Work**: [Tutorial](docs/tutorial-tree-of-work.md) | [How-To](docs/howto-tree-of-work.md) | [Reference](docs/reference-tree-of-work.md) | [Explanation](docs/explanation-tree-of-work.md)
+- **Deep Plan**: [Tutorial](docs/tutorial-deep-plan.md) | [How-To](docs/howto-deep-plan.md) | [Reference](docs/reference-deep-plan.md) | [Explanation](docs/explanation-deep-plan.md)
+- **Investigate**: [Tutorial](docs/tutorial-investigate.md) | [How-To](docs/howto-investigate.md) | [Reference](docs/reference-investigate.md) | [Explanation](docs/explanation-investigate.md)
+
 ## Important Constraints
 
 - **Tree of Work**: Only one ACTIVE task at a time. `validate` fails if 2+ are ACTIVE.

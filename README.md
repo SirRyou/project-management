@@ -114,6 +114,28 @@ project-management/
 └── LICENSE
 ```
 
+## Documentation
+
+Comprehensive documentation for each skill follows the [Diataxis framework](https://diataxis.fr/) — four quadrants serving different reader needs:
+
+### Tree of Work
+- **[Tutorial](docs/tutorial-tree-of-work.md)** — Walk-through from setup to first working example
+- **[How-To Guide](docs/howto-tree-of-work.md)** — Task-oriented instructions for common workflows
+- **[Reference](docs/reference-tree-of-work.md)** — Complete technical description of all concepts
+- **[Explanation](docs/explanation-tree-of-work.md)** — Design rationale and trade-offs
+
+### Deep Plan
+- **[Tutorial](docs/tutorial-deep-plan.md)** — Plan a feature from scratch with adversarial review
+- **[How-To Guide](docs/howto-deep-plan.md)** — Task-oriented instructions for planning workflows
+- **[Reference](docs/reference-deep-plan.md)** — Complete technical description of all phases
+- **[Explanation](docs/explanation-deep-plan.md)** — Design rationale and trade-offs
+
+### Investigate
+- **[Tutorial](docs/tutorial-investigate.md)** — Debug a bug from symptom to fix
+- **[How-To Guide](docs/howto-investigate.md)** — Task-oriented instructions for debugging workflows
+- **[Reference](docs/reference-investigate.md)** — Complete technical description of all phases
+- **[Explanation](docs/explanation-investigate.md)** — Design rationale and trade-offs
+
 ## Contributing
 
 1. Fork the repository
