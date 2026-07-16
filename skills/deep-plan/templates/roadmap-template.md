@@ -94,7 +94,7 @@ _(If no security surface: `No security surface — reason: [why]`)_
 
 #### Exit Criteria
 
-- [ ] ...
+- [ ] [Machine Verification Command: `npm test` / `pytest` / `cargo test` / `git diff check`] — must pass cleanly
 
 ---
 

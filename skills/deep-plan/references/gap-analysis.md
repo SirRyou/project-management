@@ -27,7 +27,8 @@ Spend proportional effort based on risk level:
 - Literal ask: [what was requested]
 - Underlying goal: [what actually needs to be true for the user]
 - Gap: [does the literal ask fully close that gap? if not, what's missing?]
-- Verdict: FIT / PARTIAL FIT (missing: ...) / MISFIT (solves wrong thing)
+- Verdict: [FIT | PARTIAL_FIT | MISFIT] — missing: [description or N/A]
+- Invariant Impact: [Preserved | Threatened: state invariant broken]
 ```
 
 Mark any PARTIAL FIT or MISFIT as requiring a scope conversation before Phase 3 — either add a task, or explicitly note it as accepted debt in the scope brief.
@@ -37,9 +38,9 @@ Mark any PARTIAL FIT or MISFIT as requiring a scope conversation before Phase 3 
 ```markdown
 ### [Item Name] — Failure Modes
 
-| # | Failure Mode | Trigger | Impact |
-|---|-------------|---------|--------|
-| F1 | [what fails] | [what causes it] | [what breaks] |
+| # | Failure Mode | Trigger | Impact | Machine Exit Verification |
+|---|-------------|---------|--------|---------------------------|
+| F1 | [what fails] | [what causes it] | [what breaks] | [test case or command to prove fix] |
 ```
 
 Name known patterns explicitly (rate limit, timeout, abort race, resource leak, context overflow, retry storm, partial write).
@@ -51,9 +52,9 @@ For every item that touches external input, auth, cross-tenant/cross-user state,
 ```markdown
 ### [Item Name] — Security Risks
 
-| # | Risk | Trust Boundary Crossed | Adversarial Trigger | Impact |
-|---|------|------------------------|----------------------|--------|
-| S1 | [what could be abused/leaked] | [where] | [what a malicious actor would send/do] | [blast radius] |
+| # | Risk | Trust Boundary Crossed | Adversarial Trigger | Impact | Defense Contract |
+|---|------|------------------------|----------------------|--------|------------------|
+| S1 | [what could be abused/leaked] | [where] | [what a malicious actor would send/do] | [blast radius] | [exact check/guard condition] |
 ```
 
 If an item genuinely has no security surface, write one line: `No security surface — reason: [why]`. Don't leave it silently blank.
@@ -64,7 +65,7 @@ For each invariant and trust boundary from Phase 1, ask:
 
 - Which failure modes (2B) or security risks (2C) could violate/cross it silently — no error, no log, no audit trail?
 
-Mark silent violations as **CRITICAL** — highest-priority tasks.
+Mark silent violations as **CRITICAL** — highest-priority tasks requiring machine-verifiable assertions.
 
 ### 2E. Categorize by Work Stream
 

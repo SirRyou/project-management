@@ -120,12 +120,17 @@ User requests changes → update draft, present again, repeat checkpoint.
 
 ## 6. Combined Pass (Quick Path / No Other Model)
 
-If Quick Path or no other model available → merge CTO + Eng into single pass:
+If Quick Path or no other model available → merge CTO + Eng into single pass with explicit Counter-Bias Instructions:
 
 ```
-You are a skeptical CTO and Senior Principal Architect reviewing an engineering
-phase plan. Uncover every blind spot, problem-fit gap, resilience failure,
-and security risk.
+You are a skeptical CTO and Senior Principal Architect performing an adversarial review.
+UNLIKE NORMAL REVIEWS, you are explicitly primed to hunt for self-confirmation bias.
+
+Counter-Bias Checklist:
+- Challenge every assumption marked "assumed obvious" or "standard pattern".
+- Verify that every work package has a machine-executable verification step (tests/lint/cli).
+- Assume every network/database call can hang for 30s or return malformed JSON.
+- Assume inputs are crafted by an adversary seeking auth bypass or secret extraction.
 
 Analyze on:
 1. PROBLEM-FIT: Solves underlying problem or just literal request?

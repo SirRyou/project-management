@@ -44,7 +44,7 @@ Full Path: Phases 1-5 below (3 checkpoints).
 ## Core Principles (in priority order)
 
 1. Solve the underlying problem, not the literal request
-2. Preserve system invariants — don't break existing guarantees
+2. Preserve system invariants — explicitly define machine-checkable exit assertions
 3. Identify failure modes early — plan sad paths before implementation
 4. Protect trust boundaries — explicitly design security models
 5. Keep work packages independently deliverable
@@ -71,8 +71,8 @@ Read scope source (`STATE.md`, `ROADMAP.md`, or equivalent). Extract: epic name,
 Analyze under three lenses (parallel if possible):
 
 1. **Problem-Fit**: Does the literal request fully solve the underlying problem?
-2. **Resilience**: Failure modes — timeouts, concurrency, duplicate calls, partial updates.
-3. **Security**: Input abuse, missing permission checks, exposed secrets.
+2. **Resilience**: Failure modes — timeouts, concurrency, duplicate calls, partial updates. Includes command-line machine verification assertions.
+3. **Security**: Input abuse, missing permission checks, exposed secrets. Includes defense contracts.
 
 Tag each gap: `FIT`, `MISFIT`, or `CRITICAL`.
 
@@ -92,7 +92,7 @@ Run review using "outside voice" — different training perspectives catch blind
 Priority order:
 1. CLI model in PATH (`claude`, `codex`, `ollama`, etc.)
 2. Subagent with different model provider
-3. Same-model subagent (flag `NO_OTHER_MODEL` — same-model bias)
+3. Same-model subagent (must include explicit counter-bias checklist)
 
 Skip Phase 4 if Phase 2 yielded all `FIT`, 0 `CRITICAL`, and <=5 total gaps.
 
@@ -104,10 +104,11 @@ Generate final roadmap. **STOP. Do not begin implementation without explicit use
 
 *Quality gates: [quality-gates.md](references/quality-gates.md)*
 
-### Non-linear flow
+### Non-linear & Mid-Execution Flow
 
 - Phase 4 review finds scope issues → jump back to Phase 2
 - Phase 2 yields all FIT, 0 CRITICAL, <=5 gaps → skip Phase 4
+- **Mid-Execution Scope Drift / Blocker**: If execution hits an invariant violation or unblocked scope growth during coding, activate the [reentry-protocol.md](references/reentry-protocol.md) for targeted delta planning.
 
 ## UI Projects
 
@@ -133,5 +134,5 @@ This skill requires these capabilities from the host runtime:
 
 If a required capability is unavailable, degrade gracefully:
 - No question tool → render checkpoint as prose, wait for typed reply
-- No subagent → use same-model with fresh context, note bias
+- No subagent → use same-model with fresh context + counter-bias checklist
 - No web-search → skip external pattern search, proceed with local analysis
