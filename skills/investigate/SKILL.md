@@ -1,8 +1,8 @@
 ---
 name: investigate
 description: >
-  Systematic debugging: trace from symptom to root cause, fix the cause,
-  prove the fix. Four phases: investigate, analyze, hypothesize, implement.
+  Systematic debugging: trace from symptom to root cause, design structural fixes,
+  and promote learnings to prevent recurrence.
   NOT for feature work, refactors, or greenfield coding.
 triggers:
   - "debug this"
@@ -10,9 +10,7 @@ triggers:
   - "why is this broken"
   - "investigate this error"
   - "root cause analysis"
-  - "it was working yesterday"
   - stack traces
-  - 500 errors
   - unexpected behavior
 requires:
   - file-read
@@ -30,173 +28,96 @@ capabilities:
 
 ## Iron Law
 
-**NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST.**
+**NO FIXES WITHOUT ROOT CAUSE INVESTIGATION AND INVARIANT VERIFICATION.**
 
-Fixing symptoms creates whack-a-mole. Every unrooted fix makes the next bug harder to find. Trace to root cause, then fix it.
-
-## Phase 1: Root Cause Investigation
-
-Gather context before forming any hypothesis.
-
-1. **Collect symptoms.** Read error messages, stack traces, reproduction steps. If insufficient, ask the user ONE question at a time.
-
-2. **Read the code.** Trace from symptom back to causes. Use grep to find all references, read to understand the logic.
-
-3. **Check recent changes:**
-   ```bash
-   git log --oneline -20 -- <affected-files>
-   ```
-   Regression means the root cause is in the diff.
-
-4. **Reproduce.** Can you trigger the bug deterministically? If not, gather more evidence before proceeding.
-
-5. **Check history.** Search project notes, issue trackers, or prior sessions for investigations on the same files. Recurring bugs in the same area are an architectural smell, not coincidence.
-
-### Prior knowledge
-
-Search for relevant findings from previous work on this codebase:
-- Project notes, ADRs, or decision logs
-- Issue tracker comments on related files
-- Code comments marking known issues (`HACK`, `FIXME`, `WORKAROUND`)
-
-If prior findings exist, note patterns. When a past finding matches the current symptom, surface it: **"Prior finding applies: [summary] (from [source])"**
-
-### Form hypothesis
-
-Output: **"Root cause hypothesis: ..."** — a specific, testable claim about what is wrong and why. Not a guess. Not "it might be." A claim you can confirm or reject with evidence.
+Speculative patching (e.g. adding quick `try-catch` blocks, local null guards, or bypassing auth) is strictly prohibited. You must trace data flow back to the root cause before editing code.
 
 ---
 
-## Phase 2: Pattern Analysis
+## Phase 1: Root Cause Investigation
 
-Check if this bug matches a known pattern:
+Gather diagnostic context before writing hypotheses or code:
 
-| Pattern | Signature | Where to look |
-|---------|-----------|---------------|
-| Race condition | Intermittent, timing-dependent | Concurrent access to shared state |
-| Null propagation | TypeError, Cannot read property of undefined | Missing guards on optional values |
-| State corruption | Inconsistent data, partial updates | Transactions, callbacks, event hooks |
-| Integration failure | Timeout, unexpected response | External API calls, service boundaries |
-| Configuration drift | Works locally, fails in staging/prod | Env vars, feature flags, DB state |
-| Stale cache | Shows old data, clears on cache invalidation | Redis, CDN, browser cache, memoization |
+1. **Collect Symptoms**: Read error messages, stack traces, and reproduction logs.
+2. **Trace Code Paths**: Follow execution and data flow from the symptom back to the source. Use `grep` to locate all references and related call sites.
+3. **Analyze History**: Check recent changes:
+   ```bash
+   git log --oneline -20 -- <affected-files>
+   ```
+   If a recent commit touched these files, prioritize reviewing that diff.
+4. **Locate Prior Findings**: Search repository docs (`STATE.md`, `CLAUDE.md`, or previous debug logs) for known pitfalls in this module. If a match is found, note: *"Prior finding applies: [summary]"*.
 
-Also check:
-- Issue tracker for related known bugs
-- `git log` for prior fixes in the same area — recurring fixes in the same files are a structural signal
+---
 
-**External research:** If no pattern matches, search for `"{framework} {error type}"` and `"{library} {component} known issues"`. Sanitize first — strip hostnames, IPs, file paths, SQL fragments, customer data from any error text before searching.
+## Phase 2: Systemic Audit & Hypotheses
+
+1. **Codebase-Wide Search**: If the bug is a pattern-based error (e.g., resource leak, missing validation, concurrency race), check if the same pattern exists in other files. Do not fix them yet—log them.
+2. **Formulate Hypothesis**: Output: **`Root cause hypothesis: [specific, testable claim about what is wrong and why]`**.
+   - Must be verifiable with a log, assertion, or unit test.
 
 ---
 
 ## Phase 3: Hypothesis Testing
 
-Before writing ANY fix, verify the hypothesis.
-
-1. **Confirm.** Add a temporary log statement, assertion, or debug output at the suspected root cause. Run the reproduction. Does the evidence match the hypothesis?
-
-2. **If wrong:** Search for the sanitized error pattern (`"{component} {error type} {framework version}"`), then return to Phase 1. Gather more evidence. Do not guess.
-
-3. **Three-strike rule:** If three hypotheses fail, **STOP.** Ask the user:
-   > Three hypotheses tested, none match. This may be an architectural issue rather than a simple bug.
-   > A) Continue investigating — I have a new hypothesis: [describe it]
-   > B) Escalate for human review — this needs someone with deeper system knowledge
-   > C) Add instrumentation — log the area and catch it on next occurrence
-
-### Red flags
-
-Watch for these during investigation — they signal you're on the wrong track:
-
-- **"Quick fix for now"** — there is no "for now." Fix it right or escalate.
-- **Proposing a fix before tracing data flow** — you're guessing, not debugging.
-- **Each fix reveals a new problem elsewhere** — wrong layer, not wrong code. Step back.
-- **Circular investigation** — same files, same analysis, same dead end. Escalate.
+1. **Verify**: Add a temporary assertion, log, or debug breakpoint at the suspected root cause. Run the reproduction scenario.
+2. **Iterate**: If the hypothesis is wrong, discard it, gather more trace data, and try again.
+3. **Escalation (Strike-Three Rule)**: If 3 hypotheses fail:
+   - **STOP.** Do not keep guessing.
+   - **Generate Debug Dump**: Write a structured reproduction report to `.agent/debug-dump.json` containing:
+     - Verified symptoms & stack traces.
+     - Hypotheses tested and why they failed.
+     - Active git diff of debug logs/instrumentation.
+   - Present the dump to the user and request escalation or human review.
 
 ---
 
-## Phase 4: Implementation
+## Phase 4: Structural Resolution
 
-Once root cause is confirmed:
+When designing the fix, reject low-effort local patches. Evaluate structural fit:
 
-1. **Fix the root cause, not the symptom.** The smallest change that eliminates the actual problem.
-
-2. **Minimal diff.** Fewest files touched, fewest lines changed. Do not refactor adjacent code.
-
-3. **Write a regression test that:**
-   - **Fails** without the fix (proves the test catches the bug)
-   - **Passes** with the fix (proves the fix works)
-
-4. **Run the full test suite.** Paste the output. No regressions allowed.
-
-5. **If the fix touches more than 5 files,** ask the user about blast radius before proceeding.
+1. **Structural vs. Patch Analysis**:
+   - *Local Patch*: Bypasses symptom for the current test case (e.g., throwing a default fallback on network timeout).
+   - *Structural Fix*: Corrects the underlying system vulnerability (e.g., implementing centralized retry middleware, database transaction boundaries, or type safety guards).
+2. **Resolution Constraint**: Implement the most robust structural fix possible. If constraints force a local patch, document the accepted technical debt explicitly in the report.
+3. **Minimal Diff footprint**: Keep changes focused on the structural issue. Do not perform unrelated refactoring.
 
 ---
 
-## Phase 5: Verification and Report
+## Phase 5: Verification & Memory Promotion
 
-**Fresh verification.** Reproduce the original bug scenario and confirm it is fixed. This is not optional.
-
-Run the test suite. Paste the output.
-
-Output a structured report:
+1. **Regression Testing**: Write a regression unit test that:
+   - **Fails** without the fix (proving it reproduces the issue).
+   - **Passes** with the fix (proving it resolves the issue).
+2. **Systemic Invariant Check**: Verify that the fix does not violate any repository invariants or break existing test suites.
+3. **Promote Learnings (Prevent Recurrence)**:
+   - If the root cause was a systemic pattern or pitfall, add it to the project's global memory file (e.g., `CLAUDE.md`, `.cursorrules`, or `STATE.md`) under a `# Pitfalls & Invariants` section.
+4. **Report**: Output the structured debug summary:
 
 ```
 DEBUG REPORT
 ════════════════════════════════════════
-Symptom:         [what the user observed]
-Root cause:      [what was actually wrong]
-Fix:             [what changed, with file:line references]
-Evidence:        [test output showing fix works]
-Regression test: [file:line of the new test]
-Related:         [prior bugs in same area, architectural notes]
-Status:          DONE | DONE_WITH_CONCERNS | BLOCKED
+Symptom:         [what was observed]
+Root cause:      [what was wrong]
+Fix Type:        [STRUCTURAL | LOCAL_PATCH (Reason: ...)]
+Fix:             [file:line reference and diff summary]
+Regression Test: [file:line of the new test]
+Global Memory:   [Promoted to CLAUDE.md / N/A]
+Status:          DONE | BLOCKED
 ════════════════════════════════════════
 ```
-
-### Record findings
-
-If you discovered a non-obvious pattern, pitfall, or insight, record it for future sessions:
-
-- **What**: Brief description of the finding
-- **Where**: Affected files (for staleness detection later)
-- **Confidence**: 1-10. Verified in code = 8-9. Inference = 4-5. User-stated = 10.
-- **Type**: `pattern` (reusable approach), `pitfall` (what NOT to do), `architectural` (structural decision)
-
-Only record genuine discoveries. Test: would this save time in a future session?
-
----
-
-## Hard Rules
-
-- Three or more failed fix attempts → STOP. Question the architecture, not the hypothesis.
-- Never apply a fix you cannot verify.
-- Never say "this should fix it." Verify and prove it. Run the tests.
-- If a fix touches more than 5 files → flag blast radius before proceeding.
-
-## Completion Status
-
-- **DONE** — root cause found, fix applied, regression test written, all tests pass
-- **DONE_WITH_CONCERNS** — fixed but cannot fully verify (intermittent bug, requires staging environment)
-- **BLOCKED** — root cause unclear after investigation, escalated for human review
 
 ---
 
 ## Runtime Bindings
 
-This skill declares what it needs from the host runtime. If a capability is missing, degrade gracefully rather than failing.
+This skill requires these capabilities from the host runtime:
 
-### Required
+- **file-read**: Read source code, logs, and git history.
+- **file-write**: Apply fixes, write regression tests, and update global memory files.
+- **bash**: Execute reproductions, run test suites, and read logs.
+- **grep**: Find references and trace execution paths.
+- **question**: Handle user checkpoints on Strike-Three or blast radius alerts.
 
-| Capability | Used for | Fallback if missing |
-|------------|----------|-------------------|
-| file-read | Read source, logs, git history | Cannot investigate without reading code — abort |
-| file-write | Apply fix, write regression test | Cannot fix without writing — report findings only |
-| bash | Run tests, git log, reproduction | Cannot verify fixes — report hypothesis only |
-| grep | Find references, trace code paths | Use read + manual search (slower) |
-| question | Escalation at 3-strike, blast radius check | Render decisions as prose, wait for typed reply |
-
-### Optional
-
-| Capability | Used for | Fallback if missing |
-|------------|----------|-------------------|
-| web-search | External pattern research | Skip — proceed with local analysis only |
-| subagent | Fresh-eyes review after failed hypotheses | Proceed with same analysis context, note limitation |
+If a required capability is missing, degrade gracefully:
+- No bash -> report verified hypothesis only, do not apply changes.
+- No question -> write debug dump to disk, pause execution, and wait for input.
