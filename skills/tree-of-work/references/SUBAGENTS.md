@@ -1,62 +1,46 @@
 # Sub-Agent Delegation Protocol
 
-Use this protocol when delegating tasks to concurrent sub-agents within the same workspace.
+Use this protocol when delegating tasks to concurrent sub-agents.
 
 ## Problem
 
-Multiple agents writing to the same `current-state.md` causes state corruption, status loss, and conflicting progress logs.
+Multiple agents working in the same context causes state corruption, conflicting edits, and lost progress. Sub-agents need isolation.
 
 ## Delegation Steps
 
-### 1. Create Isolated State Directory
-```bash
-python scripts/tree_of_work.py --state-dir .agent/tree-of-work/subagents/<sub-agent-id> init
-```
+### 1. Define the sub-task scope
 
-### 2. Write Sub-Agent Task State
+Pass only what the sub-agent needs:
+- The specific task description
+- Relevant files and directories
+- Exit criteria (what "done" looks like)
+- Any constraints or invariants
 
-In `.agent/tree-of-work/subagents/<sub-agent-id>/current-state.md`:
-```markdown
-## NOW
-- **Task:** <specific sub-task>
-- **Status:** ACTIVE
-- **Primary Files:** <files for this sub-task>
-- **Next Concrete Step:** <first action>
-```
+Don't pass your full task list, session history, or unrelated context.
 
-No unrelated parent tasks. Only the sub-agent's assignment.
+### 2. Let the sub-agent track its own state
 
-### 3. Launch Sub-Agent
+The sub-agent uses whatever tracking mechanism its runtime provides (memory, task tool, progress notes). Don't require it to use a specific file format or directory.
 
-Pass the state directory via:
-- CLI flag: `--state-dir .agent/tree-of-work/subagents/<sub-agent-id>`
-- Environment variable: `TREE_OF_WORK_DIR=.agent/tree-of-work/subagents/<sub-agent-id>`
+### 3. Coordinate via completion
 
-### 4. Validate and Merge
+When the sub-agent finishes:
+1. Validate the output (tests pass, no regressions, exit criteria met)
+2. Merge the result into your own progress notes
+3. If the sub-agent discovered new work, log it in your backlog
 
-After sub-agent completes:
-```bash
-python scripts/tree_of_work.py --state-dir .agent/tree-of-work/subagents/<sub-agent-id> validate
-```
+### 4. Clean up
 
-If valid and status is DONE:
-1. Update parent's `current-state.md` — mark the delegated branch as DONE
-2. Archive or delete the sub-agent directory
+Remove any temporary files, branches, or state the sub-agent created. Don't leave artifacts.
 
-## Directory Structure
+## Isolation Rules
 
-```
-.agent/tree-of-work/
-├── current-state.md              ← Main state
-├── history/                      ← Snapshots
-└── subagents/
-    └── <sub-agent-id>/
-        ├── current-state.md      ← Isolated state
-        └── history/              ← Sub-agent snapshots
-```
+- **Don't write to each other's state.** Parent and sub-agent maintain separate progress notes.
+- **Don't share file locks.** If both need to edit the same file, coordinate sequentially.
+- **Don't assume the sub-agent's context.** It doesn't know what you know. Pass explicit context.
 
 ## Gotchas
 
-- Sub-agent directories are in `.gitignore` — don't commit them
-- Always validate sub-agent output before merging back to parent state
-- Clean up sub-agent directories after merging to avoid clutter
+- Sub-agent output may need sanitization before merging (secrets, debug logs, partial work)
+- Always validate before merging — a sub-agent marking something DONE doesn't mean it's verified
+- If a sub-agent fails, log the failure and decide: retry, escalate, or abandon

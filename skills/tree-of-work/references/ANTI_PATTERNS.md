@@ -8,11 +8,11 @@ Behaviors that undermine workspace organization, security, and Git stability.
 
 **Why it's bad:** Repository pollution, merge conflict loops, CI overhead. If an agent discovers 3-5 small issues in 10 minutes, that's 3-5 new branches cluttering the repo.
 
-**Fix:** Keep all logical branches on the same physical Git branch. Commit according to your project's own conventions — the skill does not prescribe commit message formats or staging rules. See [STATUS_MODEL.md](STATUS_MODEL.md) for soft guidelines.
+**Fix:** Keep all logical branches on the same physical Git branch. Commit according to your project's own conventions — the skill does not prescribe commit message formats or staging rules. See the Status Model section in SKILL.md for transition rules.
 
 ## 2. Credentials in State Files
 
-**Mistake:** Pasting raw API responses or error messages with tokens/keys into `current-state.md`.
+**Mistake:** Pasting raw API responses or error messages with tokens/keys into progress notes or state files.
 
 **Why it's bad:** Secrets in Git history are permanent. Requires force-push to clean.
 
@@ -37,7 +37,7 @@ The `validate` and `snapshot` commands auto-redact known patterns and block high
 
 ## 4. Silent Context Drift
 
-**Mistake:** Modifying files without updating `current-state.md`.
+**Mistake:** Modifying files without updating your progress notes or task state.
 
 **Why it's bad:** Successor agents won't know what changed, leading to duplicate work or overwrites.
 

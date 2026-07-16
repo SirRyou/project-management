@@ -1,141 +1,173 @@
 ---
 name: tree-of-work
 description: >
-  Track tasks, maintain context across sessions, and coordinate sub-agents
-  using a hierarchical state file. Activate this skill immediately — even
-  for casual phrases like "where was I", "lanjut dari mana", "what's next",
-  "I'm lost", "lost track", or "resume" — without waiting for explicit
-  task management language. Also triggers on: organize work, break down a
-  complex task, track progress, manage multiple tasks, delegate to sub-agents,
-  "task breakdown", or "worktree".
-license: MIT
-compatibility: Requires Python 3.8+ (for scripts/tree_of_work.py). Falls back to manual markdown editing if Python is unavailable.
-metadata:
-  author: ryou
-  version: "2.0"
+  Focus enforcement and context recovery for agents. Keeps one active task,
+  prevents drift, preserves context across sessions. Activate on "where was I",
+  "what's next", "I'm lost", "resume", or any multi-step work.
+triggers:
+  - "where was I"
+  - "what's next"
+  - "I'm lost"
+  - "lost track"
+  - "resume"
+  - "organize work"
+  - "break down this task"
+  - "track progress"
+  - "task breakdown"
+requires:
+  - file-read
+  - file-write
+  - question
+capabilities:
+  optional:
+    - subagent
+    - git
 ---
 
 # Tree of Work
 
-Hierarchical task tracking with context recovery and sub-agent coordination.
+Focus enforcement and context recovery for agents. Not a project management system — a behavioral framework that keeps the agent on track.
 
-## Quick Reference
+## Iron Law
 
-| Command | Purpose |
-|---------|---------|
-| `python scripts/tree_of_work.py init` | Create state directory (scans and auto-absorbs legacy roadmaps/todos) |
-| `python scripts/tree_of_work.py status` | Print current state summary |
-| `python scripts/tree_of_work.py validate` | Verify state file formatting, parent-child ID relationships, and check secrets |
-| `python scripts/tree_of_work.py snapshot -m "msg"` | Save timestamped copy of state to history (run this when completing tasks or creating progress logs) |
-| `python scripts/tree_of_work.py reset` | Reset state to default template |
-| `--state-dir PATH` | Override state directory (any command) |
-| `python scripts/tree_of_work.py status --json` | Machine-readable JSON output |
+**One ACTIVE task at all times. Never mark multiple tasks ACTIVE.**
 
-State lives in `.agent/tree-of-work/current-state.md` by default. Created only when complexity triggers auto-elevation — not at skill activation.
+This is the single most important rule. Everything else is commentary.
 
-## Core Workflow
+## Core Rules
 
-### Ephemeral First
-
-When the skill activates, track state **in memory only**. No file on disk. The agent knows its ACTIVE task and Next Concrete Step internally.
-
-**Do not run `init` unless one of these triggers fires:**
-- Branching detected (bug, blocker, sub-task discovered)
-- Task transition (ACTIVE → PARKED/BLOCKED)
-- Handoff to sub-agent or back to user
-- Session nearing end (to preserve context)
-
-When a trigger fires, run `init` to create the state file, then record the current state.
-
-### Session Start
-
-1. Check if state file exists: `python scripts/tree_of_work.py status`
-2. If it exists and you're resuming → read it, reconcile with `git status`, continue from `Next Concrete Step`
-3. If it doesn't exist → scan for existing state docs. Read `references/ONBOARDING.md` **only if** you need to absorb legacy docs (ROADMAP.md, TODO.md, CLAUDE.md)
-4. If resuming after a crash → read `references/RECOVERY.md`
-
-## Reference File Loading Protocol
-
-**Do NOT read all reference files.** Load only when the specific condition is met. This prevents context bloat — the agent's job is to write code, not read project management manuals.
-
-| File | Load when... | Skip when... |
-|------|-------------|--------------|
-| `STATE_TEMPLATE.md` | You're about to run `init` and need the template | State file already exists |
-| `ONBOARDING.md` | First session in a repo with no state file | State file exists or task is simple |
-| `RECOVERY.md` | Resuming after crash/timeout/handoff | Fresh session, no prior state |
-| `SUBAGENTS.md` | You're about to delegate to a sub-agent | Working solo |
-| `CLASSIFICATION.md` | You can't decide if a task is PARKED, BLOCKED, or TODO | Status is obvious |
-| `STATUS_MODEL.md` | You need transition rules not covered in SKILL.md | The status table above is sufficient |
-| `ANTI_PATTERNS.md` | You're unsure if a behavior is problematic | You're following the Gotchas section |
-| `TRAPS.md` | You caught yourself drifting and want to identify the trap | You're focused and on-track |
-
-**Total lines you should ever load in one session: ~100-150, not 839.**
-
-### During Work
-
-- **One ACTIVE task at all times.** Never mark multiple tasks ACTIVE.
-- Update `Latest Progress` and `Next Concrete Step` after each meaningful change.
-- When discovering sub-work, add it to `BRANCHES` with a `Parent Task` reference.
-- When switching tasks: PARK the current one first, then ACTIVATE the new one.
-
-Progress:
-- [ ] Step 1: Check for existing state or legacy docs
-- [ ] Step 2: Work on the single ACTIVE task
-- [ ] Step 3: Auto-elevate to file when complexity triggers (branching, transition, handoff)
-- [ ] Step 4: Validate state (`validate`) before marking DONE
-
-### Git Awareness
-
-This skill tracks **logical state** (what you're working on), not Git workflow. How you commit, branch, and manage source control is your project's own convention. If you need guidance on avoiding branch clutter, read `references/STATUS_MODEL.md`.
-
-## State File Structure
-
-The state file is created on-demand (auto-elevation), not at skill activation. When you run `init`, read `references/STATE_TEMPLATE.md` for the template format.
-
-**Key rules:**
-- `NOW` section: exactly one ACTIVE task with `Task`, `Status`, `Primary Files`, `Latest Progress`, `Next Concrete Step`
-- `PARKED / BLOCKED` section: paused tasks with `Reason` and `Resume Condition`
-- `BRANCHES` section: discovered sub-work, each with a `Parent Task` reference
-- `VALIDATION` section: optional test/lint/build status
+1. **Ephemeral first.** Track state in memory. Only write to disk when complexity demands it (branching, task transition, sub-agent handoff, session end).
+2. **Update as you work.** After each meaningful change, update your current progress and next step. Don't batch updates at the end.
+3. **Park before switching.** When switching tasks: mark current as PARKED with reason, then activate new one.
+4. **Scope gate every change.** Before modifying a file outside your current task: "If I remove this change, does the main task still fail?" If no — it's drift. Revert it, log it, move on.
+5. **Validate before DONE.** Run tests, check for regressions, update progress notes. A task isn't done until it's verified.
 
 ## Status Model
 
-| Status | Meaning |
-|--------|---------|
-| `ACTIVE` | Currently being worked on (max 1) |
-| `PARKED` | Paused, unblocked, can resume anytime |
-| `BLOCKED` | Waiting on external dependency |
-| `TODO` | Backlog, not started |
-| `DONE` | Completed and verified |
+| Status | Meaning | Rule |
+|--------|---------|------|
+| `ACTIVE` | Being worked on now | Max 1. Always. |
+| `PARKED` | Paused by choice | You control the resume. |
+| `BLOCKED` | Waiting on external dependency | Someone else has the ball. |
+| `TODO` | Backlog | Not started. |
+| `DONE` | Completed and verified | Terminal. |
 
-If you can't decide between PARKED and BLOCKED, read `references/CLASSIFICATION.md`.
+### PARKED vs BLOCKED
+
+The question: **Do you control the resume?**
+
+- Yes → PARKED. You chose to stop. You can continue when ready.
+- No → BLOCKED. External dependency. Someone else must act first.
+
+A task that depends on another task *you are also doing* is PARKED, not BLOCKED. You control both.
+
+### DONE Criteria
+
+A task is NOT DONE until all are true:
+
+1. Code change is made
+2. Tests pass (if the project has tests)
+3. No regressions in existing functionality
+4. Progress notes reflect what was actually done
+
+If the user says "this is done, move on" without testing, mark it `DONE (untested — user confirmed)` and log the gap.
+
+## Context Recovery
+
+When resuming a session:
+
+1. Check for prior state — progress notes, task list, or memory files
+2. Reconcile with `git status` — do modified files match what you expected?
+3. If state is stale (git history diverged), trust git. Update state to reflect reality.
+4. Begin from the last `Next Concrete Step`. Don't restart from scratch.
+
+When ending a session:
+
+1. Record current progress and next concrete step
+2. If work is in progress, PARK the active task with reason and resume condition
 
 ## Sub-Agent Delegation
 
-When delegating to sub-agents, isolate their state to prevent conflicts. Read `references/SUBAGENTS.md` before launching a sub-agent.
+When delegating to a sub-agent:
 
-**TL;DR:**
-1. Create isolated state dir: `.agent/tree-of-work/subagents/<id>/`
-2. Init with `--state-dir .agent/tree-of-work/subagents/<id> init`
-3. Write only the sub-task in the sub-agent's `NOW` section
-4. After completion: validate, merge status back, archive sub-agent dir
+1. Pass only the sub-task scope — not your full task list
+2. Sub-agent tracks its own state independently
+3. After completion: validate output, merge status back, clean up
 
-## Gotchas
+Don't let sub-agents write to your state. Isolation prevents corruption.
 
-- **Never commit secrets in state files.** The script auto-redacts known patterns (GitHub tokens, Stripe keys, JWTs, AWS keys) and blocks high-entropy strings. If `validate` fails with a security alert, sanitize the value before proceeding.
-- **Single ACTIVE task is enforced.** `validate` fails if 2+ tasks are ACTIVE. Mark tasks DONE or PARKED before switching.
-- **Silent context drift.** Once a state file exists, always update it when modifying files. Successor agents rely on this file to know what happened.
-- **Don't fight existing state systems.** If the repo has ROADMAP.md, TODO.md, or a project board, absorb from them — don't create a competing source of truth. Read `references/ONBOARDING.md` if you need to absorb legacy docs.
-- **Don't create files for simple tasks.** Single-step requests ("fix this typo") should never trigger `init`. Keep tracking ephemeral until complexity warrants a file.
-- **Python fallback.** If Python is unavailable, edit `current-state.md` directly following the template. The script is a helper, not a gatekeeper.
+## Focus Traps
 
-## Anti-Patterns
+These are the most common ways agents lose focus. Recognize and avoid them.
 
-**Most common mistakes:**
-1. Pasting raw API responses with secrets into state → sanitize first
-2. Marking multiple tasks ACTIVE → one at a time, always
-3. Modifying files without updating state → update `Latest Progress` as you go
-4. Fixing "quick bugs" without parking the main task → Branch Promotion Protocol
-5. Scope drift — fixing unrelated code → apply the Scope Gate Test
+### Double Active
 
-Read `references/ANTI_PATTERNS.md` for the full catalog, or `references/TRAPS.md` for context drift traps with concrete mitigations.
+Two tasks marked ACTIVE simultaneously. The agent jumps between them without transitions.
+
+**Fix:** One ACTIVE always. PARK the current one before touching anything else. No exceptions for "quick fixes."
+
+### Silent Branching
+
+Making broad code changes outside current scope without recording them. Fixing typos in other files, refactoring unrelated modules, reorganizing imports.
+
+**Fix:** The Scope Gate Test. "If I remove this change, does the main task still fail?" If no — revert, log in backlog, return to main task.
+
+### Vague Next Step
+
+`Next Concrete Step` says "continue working on app" or "debug the failing connection."
+
+**Fix:** Next step must answer: what file, what line, what change. "Add exponential backoff to WebSocket reconnect in prices.ts:42" — not "continue implementing websocket."
+
+### God Object Mutation
+
+Agent starts refactoring multiple unrelated modules while supposed to be working on a localized sub-task. The diff explodes, context window fills.
+
+**Fix:** Before modifying any file outside original scope, run the Substitution Test. If the primary task works without the change, it's drift.
+
+## Clarification Protocol
+
+**Ask the user only when:**
+
+1. True ambiguity — multiple valid interpretations, wrong choice wastes significant work
+2. Conflicting signals — state says one thing, git says another, user says a third
+3. Destructive action — about to do something hard to reverse
+4. No task discoverable — no state, no history, vague prompt
+
+**Don't ask when:**
+
+- The answer is inferable from context (git status shows modified files → continue that work)
+- The choice is low-stakes (picking between two backlog items → just pick one, document why)
+- You can make a reasonable default (no state file → scan for context, proceed)
+
+**How to ask:** Constrained choice with a default, not open-ended.
+
+Bad: "What would you like me to do?"
+Good: "I found two items in progress: Auth and Billing. I'll default to Auth unless you specify."
+
+## References (load on demand)
+
+| File | Load when |
+|------|-----------|
+| [CLASSIFICATION.md](references/CLASSIFICATION.md) | Unsure if a task is PARKED, BLOCKED, or TODO — or facing an edge case |
+| [TRAPS.md](references/TRAPS.md) | You caught yourself drifting and want to identify the trap |
+| [ANTI_PATTERNS.md](references/ANTI_PATTERNS.md) | Unsure if a behavior is problematic |
+| [SUBAGENTS.md](references/SUBAGENTS.md) | About to delegate to a sub-agent |
+
+Don't bulk-load. Total reference lines per session target: ~100-150.
+
+## Scope Boundary
+
+This skill **enforces focus**. It does not:
+
+- Generate implementation plans (use a planning skill)
+- Decide what the user should work on (that's the user's call)
+- Create roadmaps or project timelines
+- Replace your platform's built-in task tracking
+
+It tells the agent **how to think**, not where to write files. Delegate persistence to your platform's native tools.
+
+## Completion Status
+
+- **DONE** — task completed, verified, no regressions
+- **DONE_WITH_CONCERNS** — completed but with known gaps (documented)
+- **BLOCKED** — cannot proceed, external dependency named

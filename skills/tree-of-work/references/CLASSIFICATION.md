@@ -83,7 +83,7 @@ When the skill activates, the agent should **actively look for work**, not wait 
 
 ```
 1. Is there a state file? → Read it. Resume from ACTIVE task.
-2. No state file? → Scan for legacy docs (see ONBOARDING.md)
+2. No state file? → Scan for existing context (roadmaps, TODOs, git history)
 3. No legacy docs? → Check git status for uncommitted work
 4. No uncommitted work? → Check git log for recent context
 5. Nothing found? → Ask the user (see Clarification Protocol)
