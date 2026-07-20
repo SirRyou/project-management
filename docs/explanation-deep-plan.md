@@ -44,7 +44,7 @@ For each item in scope, run three independent analyses:
 Why three lenses?
 - Each catches different blind spots
 - Running them in parallel prevents tunnel vision
-- Tagging gaps (FIT, MISFIT, CRITICAL) enables prioritization
+- Tagging gaps (FIT, MISFIT, CRITICAL, BLOCKER) enables prioritization
 
 ### 3. Adversarial Review
 
@@ -60,13 +60,14 @@ Why adversarial review?
 
 ### Quick Path vs Full Path
 
-Deep Plan offers two execution paths:
+Deep Plan offers two execution paths (<!-- ponytail: simplified to use logical complexity/uncertainty instead of fragile file-count metric -->):
 
-| Criteria | Quick Path | Full Path |
+| Criteria | Quick Path (Low Overhead) | Full Path (Deep Plan) |
 |----------|-----------|-----------|
-| Files affected | <=3 | >3 |
-| Work streams | <=3 | >3 |
-| CRITICAL security items | 0 | any |
+| **Logic Sequencing** | Linear or independent steps (<=3) | Multi-stage / branching dependencies (>3) |
+| **State / Invariant Impact** | Stateless, pure additions, or isolated logic | Mutates schemas, shared state, or system invariants |
+| **Uncertainty & Risk** | Zero unknowns; high confidence | Unknowns, spikes required, or low confidence |
+| **Security Surface** | No trust-boundary crossings | New or modified trust-boundaries / auth paths |
 
 **What we gain with Quick Path:**
 - Faster for simple changes

@@ -26,13 +26,13 @@ Or you can invoke it explicitly by asking the agent to plan a feature.
 ### 2. Choose Execution Path
 
 The agent will ask about the scope:
-- **Quick Path**: <=3 files, <=3 work streams, no CRITICAL security items
-- **Full Path**: >3 files, >3 work streams, or any CRITICAL security items
+- **Quick Path**: linear logic, no state mutations, low uncertainty, no trust-boundary crossings
+- **Full Path**: multi-stage dependencies, state mutations, unknowns, or trust-boundary crossings
 
 **Example:**
 ```
-Agent: How many files will this feature touch?
-You: About 5 files across 3 modules.
+Agent: Is this linear or multi-stage with dependencies?
+You: Multi-stage — schema mutation with shared state.
 Agent: That's Full Path territory. Starting Phase 1.
 ```
 
@@ -60,7 +60,7 @@ The agent analyzes under three lenses:
 2. **Resilience**: What fails when things go wrong?
 3. **Security**: What gets abused?
 
-Each gap is tagged: `FIT`, `MISFIT`, or `CRITICAL`.
+Each gap is tagged: `FIT`, `MISFIT`, `CRITICAL`, or `BLOCKER`.
 
 **Example:**
 ```
@@ -68,6 +68,7 @@ Agent: Gap analysis complete:
       - Problem-Fit: FIT (request matches goal)
       - Resilience: 2 failure modes found (timeout, retry storm)
       - Security: 1 CRITICAL item (missing input validation)
+      - Dependency: 1 BLOCKER (waiting on API key from vendor)
       Total: 3 gaps, 1 CRITICAL
 ```
 

@@ -12,13 +12,14 @@ Deep Plan is a behavioral skill for AI agents that guides structured planning fo
 
 ### Execution Path
 
-Decide at entry:
+Decide at entry (<!-- ponytail: simplified to use logical complexity/uncertainty instead of fragile file-count metric -->):
 
-| Criteria | Quick Path | Full Path |
+| Criteria | Quick Path (Low Overhead) | Full Path (Deep Plan) |
 |----------|-----------|-----------|
-| Files affected | <=3 | >3 |
-| Work streams | <=3 | >3 |
-| CRITICAL security items expected | 0 | any |
+| **Logic Sequencing** | Linear or independent steps (<=3) | Multi-stage / branching dependencies (>3) |
+| **State / Invariant Impact** | Stateless, pure additions, or isolated logic | Mutates schemas, shared state, or system invariants |
+| **Uncertainty & Risk** | Zero unknowns; high confidence | Unknowns, spikes required, or low confidence |
+| **Security Surface** | No trust-boundary crossings | New or modified trust-boundaries / auth paths |
 
 **Auto-escalate** from Quick to Full if Phase 2 yields `MISFIT` or `CRITICAL` items, or total scope exceeds 15 tasks.
 
@@ -58,7 +59,7 @@ Analyze under three lenses (parallel if possible):
 2. **Resilience**: Failure modes — timeouts, concurrency, duplicate calls, partial updates. Includes command-line machine verification assertions.
 3. **Security**: Input abuse, missing permission checks, exposed secrets. Includes defense contracts.
 
-Tag each gap: `FIT`, `MISFIT`, or `CRITICAL`.
+Tag each gap: `FIT`, `MISFIT`, `CRITICAL`, or `BLOCKER` (blocks execution until resolved — external dependency, env config, access grant).
 
 *Detailed guide: [gap-analysis.md](../skills/deep-plan/references/gap-analysis.md)*
 
@@ -87,6 +88,26 @@ Skip Phase 4 if Phase 2 yielded all `FIT`, 0 `CRITICAL`, and <=5 total gaps.
 Generate final roadmap. **STOP. Do not begin implementation without explicit user confirmation.**
 
 *Quality gates: [quality-gates.md](../skills/deep-plan/references/quality-gates.md)*
+
+### Execution Handoff (Phase 5 → Implementation)
+
+After user confirms roadmap, hand off to execution via subagent-driven workflow:
+
+1. **Opt-in** — confirm with user: hand off or stop
+2. **Isolation** — fresh session, reads only roadmap file
+3. **Pre-flight scan** — check for plan contradictions before execution
+4. **Per-WS dispatch loop** (in dependency order):
+   - Extract WS brief → `.deep-plan/handoff/WS{n}-brief.md`
+   - Dispatch implementer subagent ([implementer-prompt.md](../skills/deep-plan/references/implementer-prompt.md))
+   - Generate diff → `.deep-plan/handoff/WS{n}-diff.md`
+   - Dispatch reviewer subagent ([reviewer-prompt.md](../skills/deep-plan/references/reviewer-prompt.md))
+   - Review loop: fix → re-review until approved
+   - Update progress ledger → `.deep-plan/handoff/progress.md`
+5. **Final review** — cross-WS integration check after all WS complete
+
+Artifacts live under `.deep-plan/handoff/`. Progress ledger survives compaction.
+
+*Detailed guide: [execution-handoff.md](../skills/deep-plan/references/execution-handoff.md)*
 
 ### Non-linear & Mid-Execution Flow
 

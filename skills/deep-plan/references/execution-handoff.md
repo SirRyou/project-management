@@ -1,6 +1,6 @@
 # Execution Handoff (Phase 5 → Implementation)
 
-Hand finalized roadmap to execution. Three rules: isolation, task unit format, implementation review.
+Hand finalized roadmap to execution. Three rules: isolation, WS-level dispatch, review loops.
 
 ---
 
@@ -27,43 +27,158 @@ Execution starts in fresh session/subagent. Reads only finalized roadmap file.
 
 ---
 
-## 3. Task Unit Format
+## 3. Artifact Layout
 
-Each task self-contained. Implementing agent needs no other context.
+All handoff artifacts live under `.deep-plan/handoff/`:
 
 ```
-### T[n] — [task title]
-
-- **Parent WS:** [one line objective context]
-- **Steps:** [bite-sized, ordered, independently verifiable]
-- **Exit criteria:** [testable, specific]
-- **Sad paths:** [F-id + one-line description]
-- **Security risks:** [S-id + one-line description]
-- **Constrained by:** [D-ids]
-- **Depends on:** [T-ids]
+.deep-plan/handoff/
+├── progress.md          # Ledger — survives compaction, tracks WS status
+├── WS1-brief.md         # Extracted WS block for implementer
+├── WS1-diff.md          # Git diff for reviewer
+├── WS1-report.md        # Implementer's output (tests, concerns)
+├── WS1-review.md        # Reviewer's verdict
+├── WS2-brief.md
+├── WS2-diff.md
+├── WS2-report.md
+├── WS2-review.md
+└── ...
 ```
 
-Bare task titles = agent stalls or drifts. Always include steps, exit criteria, sad paths inline.
+| Artifact | Created by | Contents |
+|----------|-----------|----------|
+| **Brief** | Controller (from roadmap) | Tasks + failure modes + security risks + exit criteria + sad paths for one WS |
+| **Diff** | Controller (git diff) | Commit list + stat summary + full diff for the WS |
+| **Report** | Implementer | What was done, exit criteria results, F-ids addressed, S-ids addressed, files changed, concerns |
+| **Review** | Reviewer | Spec verdict + quality verdict + failure modes & security table |
 
 ---
 
-## 4. Implementation Review
+## 4. Pre-Flight Scan
 
-After sprint/work stream implementation completes, verify against plan requirements:
+Before dispatching WS1, scan the roadmap once for:
 
-- Exit criteria met?
-- Sad paths handled?
-- Security risks addressed?
-- Constraints respected?
-- Dependencies satisfied?
+- Tasks that contradict each other or the plan's global constraints
+- Dependencies that form cycles
+- Exit criteria that can't be machine-verified
 
-Gaps → flag for rework. Match implementation to plan, not plan to implementation.
+Present findings as one batched question before execution begins. If clean, proceed without comment.
+
+---
+
+## 5. Per-Workstream Dispatch Loop
+
+For each workstream in dependency order:
+
+### 5a. Extract WS Brief
+
+Controller reads the roadmap, extracts the WS block, writes to `.deep-plan/handoff/WS{n}-brief.md`:
+
+1. Copy the WS section from the roadmap (tasks table, failure modes, security risks, exit criteria, sad paths)
+2. Copy relevant Architecture Decisions (D-ids) that affect this WS
+3. Copy WS dependencies from the dependency graph
+4. Write to `.deep-plan/handoff/WS{n}-brief.md`
+
+### 5b. Dispatch Implementer
+
+Give the implementer subagent (use [implementer-prompt.md](implementer-prompt.md)):
+
+1. **WS brief path** — `.deep-plan/handoff/WS{n}-brief.md`
+2. **Context** — what earlier workstreams produced that this WS depends on
+3. **Decisions** — any D-ids that affect this WS (already in brief from 5a)
+4. **Report path** — `.deep-plan/handoff/WS{n}-report.md`
+5. **Working directory** — where to implement
+
+The implementer:
+- Implements all tasks in the WS
+- Runs exit criteria verification commands
+- Writes report with test results, commits, and concerns
+- Returns: status + commit range + one-line test summary
+
+**Status handling:**
+- **DONE** → proceed to review
+- **DONE_WITH_CONCERNS** → read concerns, address if correctness/scope, note if observation, proceed to review
+- **NEEDS_CONTEXT** → provide missing context, re-dispatch
+- **BLOCKED** → assess: context problem (re-dispatch), needs more capability (upgrade model), plan wrong (escalate to user)
+
+### 5c. Generate Diff
+
+Controller generates the diff file for the reviewer:
+
+```bash
+git diff [BASE_SHA]..[HEAD_SHA] > .deep-plan/handoff/WS{n}-diff.md
+git log --oneline [BASE_SHA]..[HEAD_SHA] >> .deep-plan/handoff/WS{n}-diff.md
+```
+
+`BASE_SHA` = commit before this WS started. `HEAD_SHA` = current HEAD after implementer commits.
+
+### 5d. Dispatch Reviewer
+
+Give the reviewer subagent (use [reviewer-prompt.md](reviewer-prompt.md)):
+
+1. **WS brief path** — `.deep-plan/handoff/WS{n}-brief.md`
+2. **WS report path** — `.deep-plan/handoff/WS{n}-report.md`
+3. **Diff path** — `.deep-plan/handoff/WS{n}-diff.md`
+4. **Global constraints** — verbatim from roadmap (copy into prompt)
+
+The reviewer returns two verdicts:
+- **Spec compliance**: did implementer build what the WS tasks specify? Extra = bad, missing = bad.
+- **Code quality**: implementation soundness, no new failure modes introduced.
+- **Failure modes & security**: F-ids and S-ids addressed? Adequate?
+
+### 5e. Review Loop
+
+- Review passes → mark WS complete in progress.md, move to next WS
+- Review fails → dispatch fix subagent with specific findings → re-review
+- Repeat until approved. Never skip re-review.
+
+**Fix subagent dispatch:**
+
+Give the fix subagent:
+
+1. **Findings** — the Critical and Important issues from the reviewer's verdict
+2. **WS brief** — same brief the implementer used (for context)
+3. **WS report** — implementer's report (for what was done)
+4. **Diff** — the review diff (for what changed)
+
+The fix subagent:
+- Fixes all Critical and Important findings
+- Re-runs the tests covering its changes
+- Appends fix results to the same WS report file
+- Returns: status + commits + test results
+
+After fix, re-dispatch the reviewer with the updated report and new diff.
+
+### 5f. Progress Ledger
+
+Append to `.deep-plan/handoff/progress.md` after each WS completes:
+
+```
+WS1: complete (commits abc1234..def5678, review clean)
+WS2: in progress
+```
+
+This survives compaction. After any context loss, check the ledger and `git log` to resume.
+
+---
+
+## 6. Final Review
+
+After all workstreams complete, dispatch one final reviewer:
+
+- Scope: cross-WS interactions, integration, overall plan compliance
+- Give it: full roadmap + all WS reports + all WS diffs
+- One fix subagent for all findings (not one per finding)
 
 ---
 
 ## Anti-Patterns
 
 - **Auto-chaining** — starting implementation immediately after Phase 5. Skips user review.
-- **Batched execution** — handing off high-level roadmap without expanded task units.
 - **Same context** — writing code in planning session. Wastes tokens.
 - **Bare titles** — delegating task list without steps/exit criteria/sad paths.
+- **Per-task dispatch** — 10 tasks = 20+ subagent calls. Dispatch per WS instead.
+- **Skipping re-review** — reviewer found issues = implementer fixes = review again.
+- **Pasting context** — hand artifacts as files, not pasted text. Fresh subagent needs task + context, not session history.
+- **Ignoring ledger** — after compaction, trust the ledger and `git log` over recollection.
+- **Skipping brief extraction** — don't paste roadmap sections into prompts. Extract to file, pass path.

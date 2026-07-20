@@ -12,10 +12,10 @@ Deep Plan guides agents through a structured planning workflow that catches blin
 
 ## When to Use
 
-- More than 3 files affected
-- Multiple independent work streams
-- Design decisions or trust-boundary updates needed
-- Phased delivery beneficial
+- Multi-stage logic with sequential dependencies
+- Changes impacting persistent state, database schemas, or system invariants
+- Design decisions, trust-boundary updates, or security-critical paths
+- High-uncertainty features benefiting from structured gap analysis and adversarial review
 
 ## When NOT to Use
 
@@ -23,13 +23,14 @@ Deep Plan guides agents through a structured planning workflow that catches blin
 
 ## How It Works
 
-### Execution Path
+### Execution Path (<!-- ponytail: simplified to use logical complexity/uncertainty instead of fragile file-count metric -->)
 
-| Criteria | Quick Path | Full Path |
+| Criteria | Quick Path (Low Overhead) | Full Path (Deep Plan) |
 |----------|-----------|-----------|
-| Files affected | <=3 | >3 |
-| Work streams | <=3 | >3 |
-| CRITICAL security items | 0 | any |
+| **Logic Sequencing** | Linear or independent steps (<=3) | Multi-stage / branching dependencies (>3) |
+| **State / Invariant Impact** | Stateless, pure additions, or isolated logic | Mutates schemas, shared state, or system invariants |
+| **Uncertainty & Risk** | Zero unknowns; high confidence | Unknowns, spikes required, or low confidence |
+| **Security Surface** | No trust-boundary crossings | New or modified trust-boundaries / auth paths |
 
 Quick Path: 3-step workflow, 1 checkpoint.
 Full Path: 5 phases, 3 checkpoints.
@@ -39,7 +40,7 @@ Auto-escalate from Quick to Full if Phase 2 yields `MISFIT` or `CRITICAL` items,
 ### Phases (Full Path)
 
 1. **Understand Scope** — read tracking docs, extract requirements, lock scope with user
-2. **Enumerate Gaps** — analyze under three lenses (Problem-Fit, Resilience, Security) in parallel
+2. **Enumerate Gaps** — analyze under three lenses (Problem-Fit, Resilience, Security) in parallel. Tag gaps: `FIT`, `MISFIT`, `CRITICAL`, `BLOCKER`.
 3. **Draft Roadmap** — work streams, tasks, dependencies, exit criteria
 4. **Adversarial Review** — "outside voice" using different model provider (CTO + Eng passes)
 5. **Finalize Roadmap** — quality gates, user confirmation required before any implementation
@@ -70,6 +71,8 @@ deep-plan/
 │   ├── adversarial-review.md   # Phase 4 review protocol
 │   ├── quality-gates.md        # Phase 5 verification
 │   ├── execution-handoff.md    # Post-plan handoff to implementation
+│   ├── implementer-prompt.md   # WS-scoped implementer subagent prompt
+│   ├── reviewer-prompt.md      # WS-scoped reviewer subagent prompt
 │   ├── ui-review.md            # Conditional UI/UX review
 │   ├── quick-path.md           # 3-step workflow for simple epics
 │   └── resilience-first-development.md  # Engineering standards reference

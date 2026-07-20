@@ -51,7 +51,7 @@ Agent: Activating Deep Plan.
       Files affected: 4 (src/auth.js, src/users.js, src/middleware.js, src/routes.js)
       Work streams: 3 (auth logic, middleware, routes)
 
-      This is Full Path territory (>3 files, >3 work streams).
+      This is Full Path territory (multi-stage dependencies, state mutations).
       Starting Phase 1: Understand Scope.
 ```
 

@@ -1,22 +1,8 @@
 ---
 name: deep-plan
 description: >
-  Adversarial-reviewed roadmap for multi-file features. Phased planning
-  with scope analysis, gap enumeration, and outside-voice review.
-  NOT for trivial changes, single-file edits, or simple bug fixes.
-triggers:
-  - "plan this feature"
-  - "design an epic"
-  - "break down this work"
-  - "create a roadmap"
-requires:
-  - file-read
-  - file-write
-  - question
-capabilities:
-  optional:
-    - subagent        # for adversarial review with different model
-    - web-search      # for external pattern research
+  Use this to create Adversarial-reviewed roadmap for complex multi-file features. Phased planning
+  with scope analysis, gap enumeration, and outside-voice review. NOT for trivial changes, single-file edits, or simple bug fixes.
 ---
 
 # Deep Plan
@@ -29,11 +15,12 @@ Never begin implementation without explicit user confirmation after Phase 5.
 
 Decide at entry:
 
-| Criteria | Quick Path | Full Path |
+| Criteria | Quick Path (Low Overhead) | Full Path (Deep Plan) |
 |----------|-----------|-----------|
-| Files affected | <=3 | >3 |
-| Work streams | <=3 | >3 |
-| CRITICAL security items expected | 0 | any |
+| **Logic Sequencing** | Linear or independent steps (<=3) | Multi-stage / branching dependencies (>3) |
+| **State / Invariant Impact** | Stateless, pure additions, or isolated logic | Mutates schemas, shared state, or system invariants |
+| **Uncertainty & Risk** | Zero unknowns; high confidence | Unknowns, spikes required, or low confidence |
+| **Security Surface** | No trust-boundary crossings | New or modified trust-boundaries / auth paths |
 
 **Auto-escalate** from Quick to Full if Phase 2 yields `MISFIT` or `CRITICAL` items, or total scope exceeds 15 tasks.
 
@@ -61,7 +48,7 @@ Warn if uncommitted changes or branch divergence. Recommend stash/commit/pull be
 
 ### Phase 1: Understand Scope
 
-Read scope source (`STATE.md`, `ROADMAP.md`, or equivalent). Extract: epic name, status, dependencies, known gaps. No tracking doc → ask user.
+Read scope source (`STATE.md`, `ROADMAP.md`, or equivalent). Extract: epic name/feature, status, dependencies, known gaps. No tracking doc → ask user.
 
 *Detailed guide: [scope-analysis.md](references/scope-analysis.md)*
 
@@ -73,7 +60,7 @@ Analyze under three lenses (parallel if possible):
 2. **Resilience**: Failure modes — timeouts, concurrency, duplicate calls, partial updates. Includes command-line machine verification assertions. *For resilience standards: [resilience-first-development.md](references/resilience-first-development.md)*
 3. **Security**: Input abuse, missing permission checks, exposed secrets. Includes defense contracts.
 
-Tag each gap: `FIT`, `MISFIT`, or `CRITICAL`.
+Tag each gap: `FIT`, `MISFIT`, `CRITICAL`, or `BLOCKER` (blocks execution until resolved — external dependency, env config, access grant).
 
 *Detailed guide: [gap-analysis.md](references/gap-analysis.md)*
 
@@ -99,7 +86,7 @@ Priority order:
 
 ### Phase 5: Finalize Roadmap
 
-Generate final roadmap. **STOP. Do not begin implementation without explicit user confirmation.**
+Generate final roadmap: *Template: [roadmap-template.md](templates/roadmap-template.md)*. **STOP. Do not begin implementation without explicit user confirmation.**
 
 After confirmation, hand off to execution: *Guide: [execution-handoff.md](references/execution-handoff.md)*
 
