@@ -3,6 +3,7 @@ name: deep-plan
 description: >
   Use this to create Adversarial-reviewed roadmap for complex multi-file features. Phased planning
   with scope analysis, gap enumeration, and outside-voice review. NOT for trivial changes, single-file edits, or simple bug fixes.
+  example trigger: "Plan this feature", "Design an epic", "Architectural planning", "Break down this work", "Create a roadmap"
 ---
 
 # Deep Plan
