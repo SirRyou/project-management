@@ -17,6 +17,7 @@ Check for CLI models available on the system. Priority: use a model **different 
 ### Timeout handling
 
 CLI tools may time out on large plans. If no output received:
+
 1. Increase timeout (150s+)
 2. Try interactive mode — have the reviewer write findings to a file you can read
 3. If credits exhausted, fall back to subagent
@@ -45,7 +46,7 @@ Here is the plan:
 [plan content]
 ```
 
-**After CTO review**: validate findings, save to review log.
+**After CTO review**: validate findings, save to drafted plan.
 
 ---
 

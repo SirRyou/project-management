@@ -1,4 +1,4 @@
-# Phase X — <Roadmap Name>
+# <Roadmap Name>
 
 ## Context
 
@@ -15,7 +15,7 @@ If the literal request and the underlying problem are the same, state that expli
 
 - Existing capabilities
 - Known limitations
-- Technical debt
+- Technical debt/Blocker
 - Previous phase summary
 
 ## Scope

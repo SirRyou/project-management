@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-07-20
+
+### Added
+
+- **BLOCKER gap tag** (Phase 2): New tag for items that block execution until resolved (external dependency, env config, access grant).
+- **WS-level subagent dispatch**: Execution-handoff rewritten with per-workstream dispatch-review loop instead of per-task.
+- **Implementer prompt template** (`implementer-prompt.md`): WS-scoped subagent prompt with failure mode/security reporting.
+- **Reviewer prompt template** (`reviewer-prompt.md`): WS-scoped subagent prompt with three-part review (spec compliance, code quality, failure modes & security).
+- **Progress ledger** (`.deep-plan/handoff/progress.md`): Durable task tracking that survives context compaction.
+- **Artifact layout**: Explicit paths for briefs, diffs, reports, and reviews under `.deep-plan/handoff/`.
+- **Pre-flight scan**: Checks for plan contradictions before execution begins.
+
+### Changed
+
+- **Execution path classifier**: Replaced file-count metric with decision-point model (logic sequencing, state/invariant impact, uncertainty/risk, security surface).
+- **Execution handoff**: Now includes concrete controller steps for brief extraction and diff generation.
+- Updated all docs to reflect new tags, classifier, and handoff workflow.
+
 ## [2.1.0] - 2026-07-16
 
 ### Added

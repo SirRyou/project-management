@@ -9,7 +9,7 @@ Guides the agent through Phase 3 (Draft Roadmap) of the deep-plan workflow.
 Draft a lightweight plan (maximum 2 pages) using the following template. This draft goes to adversarial review in Phase 4.
 
 ```markdown
-## Draft Plan: [Epic Name] — Phase [X]
+## Draft Plan: [Epic/feature Name] — Phase [X]
 
 ### Problem-Fit Note
 [Describe any PARTIAL FIT / MISFIT items from Phase 2A and how the plan addresses or accepts them as debt]

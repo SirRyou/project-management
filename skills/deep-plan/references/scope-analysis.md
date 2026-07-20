@@ -10,7 +10,7 @@ Guides the agent through Phase 1 (Understand Scope) of the deep-plan workflow.
 
 Search order:
 
-1. `*references/resilience-first-development.md` in skill dir
+1. `references/resilience-first-development.md` in skill dir
 2. None found → use embedded generic standard in `gap-analysis.md`
 
 Project doc exists → read full, extract relevant sections per lens.
