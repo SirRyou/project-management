@@ -1,6 +1,6 @@
 # Reference: Gap Analysis (Phase 2)
 
-Guides the agent through Phase 2 (Enumerate Gaps) of the deep-plan workflow, including the generic planning standard fallback.
+Guides the agent through Phase 2 (Adversarial Gap Enumeration) of the deep-plan workflow.
 
 ---
 
@@ -33,6 +33,22 @@ Spend proportional effort based on risk level:
 
 Mark any PARTIAL FIT or MISFIT as requiring a scope conversation before Phase 3 — either add a task, or explicitly note it as accepted debt in the scope brief.
 
+### 2A-bis. Blocker Check (run alongside 2A, every item)
+
+This is a separate axis from the FIT verdict above — an item can be a clean FIT and still be a `BLOCKER`. Ask, per item:
+
+> Can this item actually be executed right now with what's currently accessible — credentials, env vars, a third-party service that needs enabling, infra/DNS that needs provisioning, an access grant that needs approval?
+
+If no:
+
+```markdown
+### Blocker: [Item Name]
+- Blocked by: [the specific missing dependency/credential/config/access]
+- Owner: [who can unblock this, if known, else "unknown"]
+```
+
+Tag the item `BLOCKER`. This is independent of and stacks with the 2A verdict, the 2D CRITICAL tag, and any Focus Rule tier — a LOW-risk item can still be a BLOCKER, and a BLOCKER item still gets its full 2A/2B/2C analysis on its own merits.
+
 ### 2B. Failure Mode Table (Lens 2)
 
 ```markdown
@@ -44,6 +60,8 @@ Mark any PARTIAL FIT or MISFIT as requiring a scope conversation before Phase 3 
 ```
 
 Name known patterns explicitly (rate limit, timeout, abort race, resource leak, context overflow, retry storm, partial write).
+
+If a failure mode's trigger or impact depends on how a specific library/API/service actually behaves and you're not sure — don't write it as settled fact. Resolve it per the Unknown Resolution Rule (SKILL.md): verify externally if it's the kind of thing docs/search would settle, ask the user if it's project-specific, or log it to the Research Backlog if it's not blocking this phase. A Failure Mode row built on an unverified guess is exactly the kind of gap Phase 4/6 tend to catch late — cheaper to flag it here.
 
 ### 2C. Security Risk Table (Lens 3)
 
@@ -59,6 +77,8 @@ For every item that touches external input, auth, cross-tenant/cross-user state,
 
 If an item genuinely has no security surface, write one line: `No security surface — reason: [why]`. Don't leave it silently blank.
 
+Same caveat as 2B: if a risk's trust boundary or blast radius depends on an assumption about third-party auth/permission behavior you haven't actually confirmed, resolve it (Unknown Resolution Rule) instead of writing the assumption in as if verified.
+
 ### 2D. Invariant & Boundary Violation Check
 
 For each invariant and trust boundary from Phase 1, ask:
@@ -71,13 +91,32 @@ Mark silent violations as **CRITICAL** — highest-priority tasks requiring mach
 
 Cluster problem-fit gaps, failure modes, and security risks into natural work stream groupings. Don't force it — let items self-organize. Typical clusters: Tool/execution, Lifecycle/async, State/data integrity, Provider/network, Auth/trust-boundary, Type/schema, Scope/UX gaps.
 
----
+### 2F. Blocker Gate (Hard Stop)
+
+Once every item has run through 2A–2E, collect every item tagged `BLOCKER` in 2A-bis. This gate runs regardless of Quick/Full Path — a BLOCKER stops the workflow either way.
+
+**If zero items are tagged BLOCKER** → proceed straight to Phase 3, no pause needed.
+
+**If one or more items are tagged BLOCKER** → stop here. Do not proceed to Phase 3 until this is resolved. Present to the user:
+
+> Phase 2 found [N] blocking item(s) that need something outside this session before planning can safely continue:
+>
+> - **[Item]** — blocked by: [what's missing]
+> - **[Item]** — blocked by: [what's missing]
+>
+> A) I can resolve this now — [provide the credential/access/config], continue Phase 2
+> B) Proceed anyway — treat blocked item(s) as accepted debt, mark out-of-scope or deferred for this roadmap
+> C) Stop planning here until resolved elsewhere
+
+Do not silently draft a roadmap in Phase 3 around a BLOCKER hoping it resolves itself by Phase 5 — that's exactly the failure mode this gate exists to catch (discovering the blocker only after review/draft effort is already spent).
+
+If the user picks (A), re-run 2A-bis for the now-unblocked item(s) before continuing. If (B), record the deferral explicitly in the Scope section (Out of Scope, with reason) so it doesn't silently vanish from the roadmap. If (C), halt the skill and return control to the user.
 
 ## Generic Planning Standard (3-Lens Fallback)
 
 Use this if no project-specific planning standards document is found in Phase 1:
 
-```
+```text
 LENS 1 — PROBLEM-FIT
 Before any failure mode work: is this plan solving the underlying problem, or
 just implementing the literal request? Ask: "If I ship exactly what was asked

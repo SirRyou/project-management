@@ -6,13 +6,29 @@ Brutal review of draft plan before finalization. Two passes: CTO lens, Eng lens.
 
 ## 1. Detect Review Path
 
-Check for CLI models available on the system. Priority: use a model **different from the one that drafted the plan** — different training catches different blind spots.
+Run this detection before choosing a path — do not reason about availability without running it:
+
+```bash
+DRAFTING_MODEL="<model that drafted this plan, e.g. claude>"
+FOUND=()
+for m in claude codex gemini ollama opencode; do
+  if command -v "$m" >/dev/null 2>&1; then
+    FOUND+=("$m")
+  fi
+done
+echo "Detected CLIs: ${FOUND[*]:-none}"
+echo "Drafting model: $DRAFTING_MODEL (excluded from candidates)"
+```
+
+Then filter `FOUND` to exclude `DRAFTING_MODEL` itself — a CLI that matches the model currently drafting/reviewing is not an outside voice, even if it's technically present in PATH.
+
+Priority: use a model **different from the one that drafted the plan** — different training catches different blind spots.
 
 ### Path Selection
 
-- **Different-model CLI available** → use it directly. Strongest outside voice.
-- **No different-model CLI** → spawn subagent with different model provider if available.
-- **No other model at all** → spawn same-model subagent with fresh context. Warn user: "No other model provider detected. Review uses same-model — bias caveat applies. Findings may reflect same training blind spots."
+- **`FOUND` minus drafting model is non-empty** → use the first one directly. Strongest outside voice.
+- **`FOUND` minus drafting model is empty, but a subagent with a different model provider is available** → spawn it.
+- **No other model at all** (only the drafting model's own CLI/API is available) → spawn same-model subagent with fresh context. Warn user: "No other model provider detected. Review uses same-model — bias caveat applies. Findings may reflect same training blind spots."
 
 ### Timeout handling
 
@@ -24,7 +40,15 @@ CLI tools may time out on large plans. If no output received:
 
 ---
 
+## 1a. Build the Reviewer Digest (once, before either pass)
+
+Extract the reviewer digest from the living roadmap file per `roadmap-draft.md`'s "Reviewer Digest" format — do this **once**, before Section 2. Both the CTO pass and the Eng pass consume this same digest; don't re-extract it separately for Section 3. If Phase 4 amendments require an updated digest partway through (e.g. after Section 4.1 modifications), regenerate it once at that point, not per-pass.
+
+---
+
 ## 2. CTO Review (Pass 1)
+
+**Full Path with an outside model available (Path Selection above resolved to "different-model CLI" or "different-provider subagent") always runs Section 2 and Section 3 as two separate reviewer invocations.** Do not merge them into one prompt and do not substitute Section 6's combined pass here — Section 6 exists only for the two conditions named in its own heading (Quick Path's own workflow, or the no-other-model fallback). If you're tempted to combine passes to save tokens while an outside model is available, that's the collapse this note exists to stop.
 
 Give reviewer this role — be BRUTAL:
 
@@ -42,11 +66,11 @@ Challenge on:
 
 For each finding: name it, explain why, propose change. Be brutal.
 
-Here is the plan:
-[plan content]
+Here is the plan (the digest built in Section 1a):
+[reviewer digest]
 ```
 
-**After CTO review**: validate findings, save to drafted plan.
+**After CTO review**: validate findings, apply as edits to the relevant sections of the living roadmap file — do not rewrite the whole file.
 
 ---
 
@@ -71,11 +95,11 @@ Challenge on:
 
 For each finding: name it, cite specific task, explain risk, propose fix.
 
-Here is the plan:
-[plan content]
+Here is the plan (same digest from Section 1a — reused, not re-extracted):
+[reviewer digest]
 ```
 
-**After Eng review**: combine with CTO findings, validate & save.
+**After Eng review**: combine with CTO findings, apply as edits to the living roadmap file.
 
 ---
 
@@ -119,9 +143,11 @@ User requests changes → update draft, present again, repeat checkpoint.
 
 ---
 
-## 6. Combined Pass (Quick Path / No Other Model)
+## 6. Combined Pass — Fallback Only
 
-If Quick Path or no other model available → merge CTO + Eng into single pass with explicit Counter-Bias Instructions:
+**This section applies to exactly two situations, and no others: (a) Quick Path's own workflow (see `quick-path.md`), or (b) Full Path where Path Selection above found no other model at all.** If Full Path has a different-model CLI or subagent available, Sections 2 and 3 run as two separate passes — see the guard note at the top of Section 2. Do not reach for this section just because a single pass is cheaper.
+
+When (a) or (b) applies → merge CTO + Eng into single pass with explicit Counter-Bias Instructions:
 
 ```
 You are a skeptical CTO and Senior Principal Architect performing an adversarial review.
