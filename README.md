@@ -15,7 +15,7 @@ A collection of agent skills for task tracking, focus enforcement, debugging, an
 ### npx (Recommended)
 
 ```bash
-use `npx skills add` for cross-agent support:
+# Use `npx skills add` for cross-agent support:
 
 npx skills add SirRyou/project-management --skill tree-of-work
 npx skills add SirRyou/project-management --skill deep-plan
