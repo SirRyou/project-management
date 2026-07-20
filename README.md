@@ -15,14 +15,11 @@ A collection of agent skills for task tracking, focus enforcement, debugging, an
 ### npx (Recommended)
 
 ```bash
-# Install to all agents
-npx @sirryou/skill-library install
+use `npx skills add` for cross-agent support:
 
-# Install to specific agent
-npx @sirryou/skill-library install --agent claude
-npx @sirryou/skill-library install --agent cursor
-npx @sirryou/skill-library install --agent codex
-npx @sirryou/skill-library install --agent gemini
+npx skills add SirRyou/project-management --skill tree-of-work
+npx skills add SirRyou/project-management --skill deep-plan
+npx skills add SirRyou/project-management --skill investigate
 ```
 
 ### Claude Code (Plugin)
