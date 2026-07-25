@@ -4,13 +4,13 @@ Every non-trivial feature must define how correctness is **verified**.
 
 ## 13.1 Required Test Types
 
-| Test Type          | When Required                               |
-|--------------------|---------------------------------------------|
-| Unit tests         | All business logic, utilities, parsers      |
-| Integration tests  | IPC handlers, API endpoints, DB operations  |
-| Regression tests   | Every production bug fix                    |
-| Snapshot tests     | UI components with stable output contracts  |
-| Concurrency tests  | Any shared mutable state or async flows     |
+| Test Type         | When Required                              |
+| ----------------- | ------------------------------------------ |
+| Unit tests        | All business logic, utilities, parsers     |
+| Integration tests | IPC handlers, API endpoints, DB operations |
+| Regression tests  | Every production bug fix                   |
+| Snapshot tests    | UI components with stable output contracts |
+| Concurrency tests | Any shared mutable state or async flows    |
 
 ## 13.2 Mandatory Edge Cases
 

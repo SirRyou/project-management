@@ -1,6 +1,7 @@
-# Implementer Subagent Prompt (WS-Scoped)
+# Implementer Subagent Prompt (Sprint-Scoped)
 
-Use this template when dispatching an implementer subagent for a workstream.
+Use this template when dispatching an implementer subagent for a sprint
+(or a parallel lane within a sprint — see `execution-handoff.md` §2).
 
 ---
 
@@ -8,23 +9,26 @@ Use this template when dispatching an implementer subagent for a workstream.
 
 ```
 Subagent (general-purpose):
-  description: "Implement WS[n]: [WS name]"
+  description: "Implement Sprint[m]: [Sprint name]"
   prompt: |
-    You are implementing Workstream [n]: [WS name]
+    You are implementing Sprint [m]: [Sprint name]
 
-    ## WS Brief
+    ## Sprint Brief
 
-    Read your workstream brief first: [BRIEF_FILE]
-    It contains the full WS block from the roadmap: tasks, failure modes,
-    security risks, exit criteria, and sad paths.
+    Read your sprint brief first: [BRIEF_FILE]
+    It contains this sprint's task set: tasks, failure modes,
+    security risks, exit criteria, and sad paths. Tasks may originate
+    from more than one Workstream in the roadmap — the brief notes the
+    source WS per task for traceability only; treat the full task set
+    in the brief as your scope, not just tasks from one WS.
 
     ## Context
 
-    [Scene-setting: where this WS fits, what earlier WS produced that you depend on]
+    [Scene-setting: where this sprint fits, what earlier sprints produced that you depend on]
 
     ## Architecture Decisions
 
-    [D-ids that affect this WS, from the roadmap's Architecture Decisions table]
+    [D-ids that affect this sprint, from the roadmap's Architecture Decisions table]
 
     ## Before You Begin
 
@@ -32,18 +36,19 @@ Subagent (general-purpose):
     - The requirements or acceptance criteria
     - The approach or implementation strategy
     - Dependencies or assumptions
-    - Anything unclear in the WS brief
+    - Anything unclear in the sprint brief
 
     **Ask them now.** Raise any concerns before starting work.
 
     ## Your Job
 
     Once you're clear on requirements:
-    1. Implement all tasks in this workstream
+    1. Implement all tasks in this sprint brief
     2. Run the exit criteria verification commands listed in the brief
     3. Verify failure modes from the brief are handled
     4. Verify security risks from the brief are addressed
-    5. Commit your work
+    5. Commit your work **CRITICAL**: Only stage and commit files you specifically
+     modified for this workstream. Do NOT use `git add .` or `git commit -a`. Explicitly `git add <file>` each changed file to avoid committing unrelated or untracked files (like `graphify-out/`)
     6. Self-review (see below)
     7. Write report and return status
 
@@ -55,7 +60,7 @@ Subagent (general-purpose):
     ## Failure Modes & Security
 
     The brief lists failure modes (F-ids) and security risks (S-ids) for
-    this WS. Your implementation must address each one. If you cannot
+    this sprint. Your implementation must address each one. If you cannot
     address a failure mode or security risk, report it as BLOCKED with
     the specific reason.
 
@@ -71,10 +76,32 @@ Subagent (general-purpose):
 
     Report back with status BLOCKED or NEEDS_CONTEXT.
 
+    ## No Shortcuts
+
+    A task reported DONE must actually be done — not made to look done.
+    Specifically, do not:
+    - Write a test that can't fail (e.g. an assertion that's always true)
+      to make a red test go green
+    - Suppress or swallow an error to stop a failure from surfacing,
+      instead of fixing what caused it
+    - Special-case the exact input a test uses instead of implementing
+      the general behavior the task asked for
+    - Skip, disable, or loosen an existing test or check without stating
+      why in your report
+    - Narrow a task's acceptance criteria quietly and report it as
+      complete anyway
+
+    If a genuine constraint forces a partial solution or a loosened
+    check, that's fine — say so explicitly in your report as a concern
+    or BLOCKED item, with the concrete reason. The problem is doing it
+    silently, not doing it for a real reason. This diff goes through an
+    integrity-focused review pass; unexplained instances of the above
+    are treated as Critical findings, not quality nitpicks.
+
     ## Before Reporting Back: Self-Review
 
     **Completeness:**
-    - Did I implement all tasks listed in the WS brief?
+    - Did I implement all tasks listed in the sprint brief?
     - Did I address all failure modes and security risks?
     - Are exit criteria verification commands passing?
 
@@ -86,7 +113,9 @@ Subagent (general-purpose):
     **Discipline:**
     - Did I avoid overbuilding (YAGNI)?
     - Did I only build what was requested?
-    - Did I stay within this WS scope?
+    - Did I stay within this sprint's scope?
+    - Would every item in "No Shortcuts" above survive someone reading
+      my diff line by line?
 
     Fix any issues you find before reporting.
 
@@ -99,7 +128,8 @@ Subagent (general-purpose):
     - Security risks addressed (S-ids)
     - Files changed
     - Self-review findings (if any)
-    - Any issues or concerns
+    - Any issues or concerns, including any partial solution or loosened
+      check and the concrete reason for it
 
     Then report back with ONLY (under 15 lines):
     - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
@@ -113,11 +143,11 @@ Subagent (general-purpose):
 
 ## Placeholders
 
-- `[BRIEF_FILE]` — REQUIRED: WS brief extracted from roadmap
+- `[BRIEF_FILE]` — REQUIRED: sprint brief extracted from roadmap
 - `[REPORT_FILE]` — REQUIRED: where to write the detailed report
-- `[directory]` — working directory for implementation
-- `[WS name]` — workstream name from roadmap
-- `[n]` — workstream number
+- `[directory]` — working directory for implementation (or isolated worktree path, for a parallel lane)
+- `[Sprint name]` — sprint name/number from the roadmap's Implementation Order
+- `[m]` — sprint number
 
 ## Status Handling
 

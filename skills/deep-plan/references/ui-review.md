@@ -7,6 +7,7 @@ Conditional Design/UI-UX lens executed during Phase 4 (Adversarial Review) of th
 ## 1. When to Trigger
 
 Inspect the Scope Brief (Phase 1) and in-scope items for any work involving:
+
 - User interfaces (UI) or user experience (UX) flows
 - Frontend development, layout structures, components, styling, settings pages
 - Visual assets, mockups, screens, interactive components
@@ -33,6 +34,7 @@ If any of these conditions are met, the Design/UI-UX review is **mandated**.
 
 ```markdown
 From Design/UI-UX Review:
+
 - [Design finding/gap] → [What changes in task or style] / REJECTED: [Reason]
 ```
 

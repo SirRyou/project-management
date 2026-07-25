@@ -71,21 +71,25 @@ write to .deep-plan/
 # Phase Roadmap: [Epic/Feature Name]
 
 ## 1. Scope & Objective
+
 - **Objective**: [Goal]
 - **Underlying Problem**: [Core problem solved]
 - **In Scope**: [Items]
 - **Out of Scope**: [Items]
 
 ## 2. Gap Analysis Summary
+
 - **Problem-Fit Gaps**: [List]
 - **Key Failure Modes**: [List]
 - **Security Risks**: [List]
 
 ## 3. Work Streams
+
 ### WS1: [Name]
+
 - **Tasks**:
-    - T1: [Title] - **Steps**: [Bite-sized] - **Exit Criteria**: [Testable] - **Sad Path**: [Mitigation]
-    - T2: ...
+  - T1: [Title] - **Steps**: [Bite-sized] - **Exit Criteria**: [Testable] - **Sad Path**: [Mitigation]
+  - T2: ...
   - **Dependencies**: [e.g., T2 depends on T1]
 
 ...

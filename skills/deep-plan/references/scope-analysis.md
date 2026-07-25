@@ -31,13 +31,6 @@ No tracking doc → ask user for epic name, status, dependencies.
 
 Multiple epics → ask which to plan.
 
-### 1C. Scan for Review Tools
-
-Detect available CLI tools for adversarial review. Check if different model backend/provider:
-
-- **Different provider available** (`claude`, `codex`, `gemini`, `ollama`, etc.) → use for independent review.
-- **Same provider only** → note same-model bias in review log. Merge the two review passes into a single pass.
-
 ---
 
 ## Phase 1 → Phase 2 Checkpoint
@@ -48,24 +41,31 @@ Detect available CLI tools for adversarial review. Check if different model back
 ## Scope Brief: [Epic Name]
 
 ### Underlying Problem
+
 One sentence: actual problem solved (not literal request).
 
 ### Objective
+
 One paragraph: what this phase accomplishes.
 
 ### In Scope
+
 - [item] — reason
 
 ### Out of Scope
+
 - [item] — reason (defer / not this epic / already done)
 
 ### System Invariants This Phase Must Preserve
+
 - [ ] [invariant] — tasks touching it
 
 ### Trust Boundaries This Phase Touches
+
 - [ ] [boundary] — tasks crossing it
 
 ### Assumptions
+
 - [assumption that breaks scope if wrong]
 ```
 

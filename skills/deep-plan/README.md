@@ -25,12 +25,12 @@ Deep Plan guides agents through a structured planning workflow that catches blin
 
 ### Execution Path (<!-- ponytail: simplified to use logical complexity/uncertainty instead of fragile file-count metric -->)
 
-| Criteria | Quick Path (Low Overhead) | Full Path (Deep Plan) |
-|----------|-----------|-----------|
-| **Logic Sequencing** | Linear or independent steps (<=3) | Multi-stage / branching dependencies (>3) |
+| Criteria                     | Quick Path (Low Overhead)                    | Full Path (Deep Plan)                               |
+| ---------------------------- | -------------------------------------------- | --------------------------------------------------- |
+| **Logic Sequencing**         | Linear or independent steps (<=3)            | Multi-stage / branching dependencies (>3)           |
 | **State / Invariant Impact** | Stateless, pure additions, or isolated logic | Mutates schemas, shared state, or system invariants |
-| **Uncertainty & Risk** | Zero unknowns; high confidence | Unknowns, spikes required, or low confidence |
-| **Security Surface** | No trust-boundary crossings | New or modified trust-boundaries / auth paths |
+| **Uncertainty & Risk**       | Zero unknowns; high confidence               | Unknowns, spikes required, or low confidence        |
+| **Security Surface**         | No trust-boundary crossings                  | New or modified trust-boundaries / auth paths       |
 
 Quick Path: 3-step workflow, 1 checkpoint.
 Full Path: 5 phases, 3 checkpoints.
@@ -83,13 +83,13 @@ deep-plan/
 
 ## Runtime Requirements
 
-| Capability | Required | Purpose |
-|------------|----------|---------|
-| file-read | Yes | Read source files, tracking docs |
-| file-write | Yes | Write plan files |
-| question | Yes | Checkpoint confirmations (3 in Full Path, 1 in Quick Path) |
-| subagent | No | Adversarial review with different model |
-| web-search | No | External pattern research |
+| Capability | Required | Purpose                                                    |
+| ---------- | -------- | ---------------------------------------------------------- |
+| file-read  | Yes      | Read source files, tracking docs                           |
+| file-write | Yes      | Write plan files                                           |
+| question   | Yes      | Checkpoint confirmations (3 in Full Path, 1 in Quick Path) |
+| subagent   | No       | Adversarial review with different model                    |
+| web-search | No       | External pattern research                                  |
 
 Graceful degradation: if a capability is missing, the skill adapts (prose checkpoints, same-model review, skip external search).
 

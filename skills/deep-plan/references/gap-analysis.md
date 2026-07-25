@@ -24,6 +24,7 @@ Spend proportional effort based on risk level:
 
 ```markdown
 ### Problem-Fit: [Item Name]
+
 - Literal ask: [what was requested]
 - Underlying goal: [what actually needs to be true for the user]
 - Gap: [does the literal ask fully close that gap? if not, what's missing?]
@@ -43,6 +44,7 @@ If no:
 
 ```markdown
 ### Blocker: [Item Name]
+
 - Blocked by: [the specific missing dependency/credential/config/access]
 - Owner: [who can unblock this, if known, else "unknown"]
 ```
@@ -54,9 +56,9 @@ Tag the item `BLOCKER`. This is independent of and stacks with the 2A verdict, t
 ```markdown
 ### [Item Name] — Failure Modes
 
-| # | Failure Mode | Trigger | Impact | Machine Exit Verification |
-|---|-------------|---------|--------|---------------------------|
-| F1 | [what fails] | [what causes it] | [what breaks] | [test case or command to prove fix] |
+| #   | Failure Mode | Trigger          | Impact        | Machine Exit Verification           |
+| --- | ------------ | ---------------- | ------------- | ----------------------------------- |
+| F1  | [what fails] | [what causes it] | [what breaks] | [test case or command to prove fix] |
 ```
 
 Name known patterns explicitly (rate limit, timeout, abort race, resource leak, context overflow, retry storm, partial write).
@@ -70,9 +72,9 @@ For every item that touches external input, auth, cross-tenant/cross-user state,
 ```markdown
 ### [Item Name] — Security Risks
 
-| # | Risk | Trust Boundary Crossed | Adversarial Trigger | Impact | Defense Contract |
-|---|------|------------------------|----------------------|--------|------------------|
-| S1 | [what could be abused/leaked] | [where] | [what a malicious actor would send/do] | [blast radius] | [exact check/guard condition] |
+| #   | Risk                          | Trust Boundary Crossed | Adversarial Trigger                    | Impact         | Defense Contract              |
+| --- | ----------------------------- | ---------------------- | -------------------------------------- | -------------- | ----------------------------- |
+| S1  | [what could be abused/leaked] | [where]                | [what a malicious actor would send/do] | [blast radius] | [exact check/guard condition] |
 ```
 
 If an item genuinely has no security surface, write one line: `No security surface — reason: [why]`. Don't leave it silently blank.

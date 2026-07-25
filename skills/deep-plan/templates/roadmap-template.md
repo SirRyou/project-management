@@ -47,9 +47,9 @@ Rules that must always remain true regardless of implementation. Fill in project
 
 Record decisions that affect multiple work streams.
 
-| ID | Decision | Rationale | Affects | Status |
-|----|----------|-----------|---------|--------|
-| D1 | ... | ... | T1, T2 | Accepted |
+| ID  | Decision | Rationale | Affects | Status   |
+| --- | -------- | --------- | ------- | -------- |
+| D1  | ...      | ...       | T1, T2  | Accepted |
 
 > When a decision is superseded, mark it `Superseded by Dxx` rather than deleting it.
 
@@ -76,17 +76,17 @@ Why this work stream exists and what invariants it protects.
 
 #### Security Risks
 
-| # | Risk | Trust Boundary Crossed | Adversarial Trigger | Impact |
-|---|------|------------------------|----------------------|--------|
-| S1 | ... | ... | ... | ... |
+| #   | Risk | Trust Boundary Crossed | Adversarial Trigger | Impact |
+| --- | ---- | ---------------------- | ------------------- | ------ |
+| S1  | ...  | ...                    | ...                 | ...    |
 
 _(If no security surface: `No security surface — reason: [why]`)_
 
 #### Tasks
 
-| ID | Task | Depends On | Risk | Status |
-|----|------|------------|------|--------|
-| T1 | ... | None | Low | TODO |
+| ID  | Task | Depends On | Risk | Status |
+| --- | ---- | ---------- | ---- | ------ |
+| T1  | ...  | None       | Low  | TODO   |
 
 #### Sad Paths
 
@@ -106,10 +106,10 @@ _(repeat WS1 structure)_
 
 ## Cross-Cutting Work
 
-| ID | Task | Work Stream | Depends On | Status |
-|----|------|-------------|------------|--------|
-| T17 | ... | Testing | WS1-T1 | TODO |
-| T22 | ... | Refactoring | None | TODO |
+| ID  | Task | Work Stream | Depends On | Status |
+| --- | ---- | ----------- | ---------- | ------ |
+| T17 | ...  | Testing     | WS1-T1     | TODO   |
+| T22 | ...  | Refactoring | None       | TODO   |
 
 ---
 
@@ -153,8 +153,8 @@ Cross-Cutting:
 ## Risks
 
 | Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| ... | Low | High | ... |
+| ---- | ---------- | ------ | ---------- |
+| ...  | Low        | High   | ...        |
 
 ---
 
@@ -162,18 +162,18 @@ Cross-Cutting:
 
 Open technical questions. When resolved, move findings into Architecture Decisions or Implementation Notes.
 
-| ID | Question | Priority | Status |
-|----|----------|----------|--------|
-| R1 | ... | High | Open |
+| ID  | Question | Priority | Status |
+| --- | -------- | -------- | ------ |
+| R1  | ...      | High     | Open   |
 
 ---
 
 ## Review Log
 
-| Review | Model | Mode | Findings | Status |
-|--------|-------|------|----------|--------|
-| Scope/Problem-Fit | ... | external / internal | N findings, M incorporated | Cleared |
-| Eng/Security | ... | external / delegate / subagent | N findings, M incorporated | Cleared |
+| Review            | Model | Mode                           | Findings                   | Status  |
+| ----------------- | ----- | ------------------------------ | -------------------------- | ------- |
+| Scope/Problem-Fit | ...   | external / internal            | N findings, M incorporated | Cleared |
+| Eng/Security      | ...   | external / delegate / subagent | N findings, M incorporated | Cleared |
 
 ---
 

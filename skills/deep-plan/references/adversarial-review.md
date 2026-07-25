@@ -126,9 +126,11 @@ Compile findings:
 ## Amendments
 
 From CTO Review:
+
 - [finding] → [change] / REJECTED: [reason]
 
 From Eng Review:
+
 - [finding] → [change] / REJECTED: [reason]
 ```
 

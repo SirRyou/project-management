@@ -21,7 +21,7 @@ Do NOT erase the existing roadmap or restart from Phase 1. Perform targeted incr
 
 1. **Pause Implementation**: Freeze active branch state. Mark affected task `BLOCKED` in execution tracking.
 2. **Execute Delta Gap Analysis (Phase 2 Delta)**:
-   - Run 3 lenses (*Problem-Fit*, *Resilience*, *Security*) **only** on the newly discovered scope or blocker.
+   - Run 3 lenses (_Problem-Fit_, _Resilience_, _Security_) **only** on the newly discovered scope or blocker.
    - Categorize new gaps: `FIT`, `MISFIT`, or `CRITICAL`.
 3. **Execute Mini-Adversarial Pass (Phase 4 Delta)**:
    - Validate proposed roadmap adjustment against existing system invariants.

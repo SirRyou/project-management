@@ -27,23 +27,23 @@ Error classifications: `Network`, `Permission`, `Parsing`, `Model`, `Logic`.
 
 ## 10.2 Log Levels
 
-| Level   | Meaning                       | Action Required             |
-|---------|-------------------------------|-----------------------------|
-| `debug` | Development diagnostics       | None (disabled in prod)     |
-| `info`  | Normal operational events     | None                        |
-| `warn`  | Degraded but functional       | Investigate soon            |
-| `error` | Operation failed              | Investigate now             |
-| `fatal` | System cannot continue        | Immediate response          |
+| Level   | Meaning                   | Action Required         |
+| ------- | ------------------------- | ----------------------- |
+| `debug` | Development diagnostics   | None (disabled in prod) |
+| `info`  | Normal operational events | None                    |
+| `warn`  | Degraded but functional   | Investigate soon        |
+| `error` | Operation failed          | Investigate now         |
+| `fatal` | System cannot continue    | Immediate response      |
 
 Never log at `error` for expected conditions. Never log sensitive data.
 
 ## 10.3 Metrics (Beyond Logs)
 
-| Signal  | Answers                      | Example                           |
-|---------|------------------------------|-----------------------------------|
-| Logs    | What happened?               | "User X failed to upload file Y"  |
-| Metrics | How often is it happening?   | "Upload failure rate: 2.3%"       |
-| Traces  | Where is time spent?         | "Auth took 400ms of 600ms total"  |
+| Signal  | Answers                    | Example                          |
+| ------- | -------------------------- | -------------------------------- |
+| Logs    | What happened?             | "User X failed to upload file Y" |
+| Metrics | How often is it happening? | "Upload failure rate: 2.3%"      |
+| Traces  | Where is time spent?       | "Auth took 400ms of 600ms total" |
 
 Minimum metrics to track: request success rate, retry frequency, timeout frequency, cache hit
 ratio, p95/p99 response time, queue depth, error rate by category.

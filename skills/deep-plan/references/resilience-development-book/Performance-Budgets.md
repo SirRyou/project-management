@@ -4,13 +4,13 @@ A feature that works but gradually degrades performance is **incomplete**.
 
 ## 9.1 Define Targets Before Implementation
 
-| Metric                   | Example Target         |
-|--------------------------|------------------------|
-| Maximum startup cost     | < 200ms cold start     |
-| Maximum memory baseline  | < 50MB                 |
-| Maximum render latency   | < 16ms per frame       |
-| Maximum network requests | < 5 per screen         |
-| Maximum bundle size      | < 250KB gzipped        |
+| Metric                   | Example Target     |
+| ------------------------ | ------------------ |
+| Maximum startup cost     | < 200ms cold start |
+| Maximum memory baseline  | < 50MB             |
+| Maximum render latency   | < 16ms per frame   |
+| Maximum network requests | < 5 per screen     |
+| Maximum bundle size      | < 250KB gzipped    |
 
 ## 9.2 Avoid These
 

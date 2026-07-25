@@ -17,7 +17,7 @@ associated resources: cancel active audio, drop active streams, reset state mana
 For every resource (file handle, connection, subscription, timer, stream), define:
 
 | Question              | Answer Required          |
-|-----------------------|--------------------------|
+| --------------------- | ------------------------ |
 | Who creates it?       | Specific module/service  |
 | Who disposes it?      | Same or explicit handoff |
 | Who retries on error? | Single owner, not both   |

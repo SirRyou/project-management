@@ -11,6 +11,7 @@ Only after execution-handoff.md's Section 6 (Final Review) has completed for eve
 ## What to Compare
 
 Pull from three sources:
+
 - The finalized roadmap (`.deep-plan/<feature-plan>.md`) — Confidence Table, Tasks, Failure Modes, Security Risks
 - Every `WS{n}-report.md` — what the implementer actually did, concerns raised
 - Every `WS{n}-review.md` — what the reviewer actually found
@@ -30,7 +31,7 @@ For each work stream, check:
 ## What NOT to Do
 
 - Don't re-litigate decisions that are already closed (Architecture Decisions, accepted debt from Phase 2) — retro is about calibration, not re-opening scope.
-- Don't turn this into a blame log on the implementer/reviewer subagents — the target is the *plan's* prediction accuracy, not execution quality.
+- Don't turn this into a blame log on the implementer/reviewer subagents — the target is the _plan's_ prediction accuracy, not execution quality.
 - Don't block on this — if the user wants to move on immediately after Final Review, write what you have from the artifacts already on disk and stop; don't chase them for input.
 
 ## Output
@@ -41,13 +42,16 @@ Write to `.deep-plan/retro.md`:
 # Retro: [Epic/Feature Name]
 
 ## Calibration Summary
+
 - [N] work streams, [M] matched their confidence estimate, [K] didn't
 - Most common miss: [pattern, if one emerges — e.g. "async lifecycle issues under-weighted in Confidence"]
 
 ## Per-Work-Stream Detail
+
 [the per-WS blocks from above]
 
 ## Carry Forward
+
 - [Any pattern worth folding into gap-analysis.md's Focus Rule or Failure Mode naming for next time — e.g. "add 'webhook retry storms' to the named pattern list"]
 ```
 

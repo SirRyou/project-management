@@ -13,6 +13,7 @@ description: >
   coding", "sanity-check this approach", "small feature, still want a plan", "roadmap for this
   bugfix-plus-refactor", "what's the plan for adding X".
 ---
+
 # Deep Plan
 
 ## Iron Law
@@ -23,8 +24,8 @@ Never begin implementation without explicit user confirmation of the finalized r
 
 Decide at entry:
 
-| Criteria                           | Quick Path (Low Overhead)                    | Full Path (Deep Plan)                               |
-| ----------------------------------- | --------------------------------------------- | ----------------------------------------------------- |
+| Criteria                     | Quick Path (Low Overhead)                    | Full Path (Deep Plan)                               |
+| ---------------------------- | -------------------------------------------- | --------------------------------------------------- |
 | **Logic Sequencing**         | Linear or independent steps (<=3)            | Multi-stage / branching dependencies (>3)           |
 | **State / Invariant Impact** | Stateless, pure additions, or isolated logic | Mutates schemas, shared state, or system invariants |
 | **Uncertainty & Risk**       | Zero unknowns; high confidence               | Unknowns, spikes required, or low confidence        |
@@ -51,7 +52,7 @@ Each phase writes its own sections directly to the living file the moment that a
 
 - Phase 1 output → Context / Objective / Current State / Scope written immediately
 - Phase 2 output → Failure Modes / Security Risks / System Invariants written immediately, per work stream, as each is analyzed
-- Phase 3 output → Tasks tables / Exit Criteria written directly into the same file (this *is* the draft — not a separate document copied in later)
+- Phase 3 output → Tasks tables / Exit Criteria written directly into the same file (this _is_ the draft — not a separate document copied in later)
 - Phase 4 output → Adversarial findings are applied as **edits** to the relevant existing sections, not a rewrite of the whole file
 - Phase 5 → does not "generate" the roadmap. It **audits and completes** a file that is already ~90% written, filling only what phases 1-4 don't already own: Review Log, Completion Checklist, final consistency pass
 
@@ -86,14 +87,14 @@ Any ambiguity about scope, intent, or constraints at this stage — not just a m
 
 Write Context / Objective / Current State / Scope directly to `.deep-plan/<feature-plan>.md` (see Progressive Write Rule).
 
-*Detailed guide: [scope-analysis.md](references/scope-analysis.md)*
+_Detailed guide: [scope-analysis.md](references/scope-analysis.md)_
 
 ### Phase 2: Enumerate Gaps
 
 Analyze under three lenses (parallel if possible):
 
 1. **Problem-Fit**: Does the literal request fully solve the underlying problem?
-2. **Resilience**: Failure modes — timeouts, concurrency, duplicate calls, partial updates. Includes command-line machine verification assertions. *For resilience standards: [resilience-first-development.md](references/resilience-first-development.md)*
+2. **Resilience**: Failure modes — timeouts, concurrency, duplicate calls, partial updates. Includes command-line machine verification assertions. _For resilience standards: [resilience-first-development.md](references/resilience-first-development.md)_
 3. **Security**: Input abuse, missing permission checks, exposed secrets. Includes defense contracts.
 
 Tag each gap: `FIT`, `MISFIT`, `CRITICAL`, or `BLOCKER` (blocks execution until resolved — external dependency, env config, access grant).
@@ -102,14 +103,14 @@ Tag each gap: `FIT`, `MISFIT`, `CRITICAL`, or `BLOCKER` (blocks execution until 
 
 Write findings directly into each work stream's Failure Modes / Security Risks sections in the living file as they're identified — not into a scratch list to be transcribed later.
 
-*Detailed guide: [gap-analysis.md](references/gap-analysis.md)*
+_Detailed guide: [gap-analysis.md](references/gap-analysis.md)_
 
 ### Phase 3: Draft Roadmap
 
 Construct the roadmap in place, in the same living file — Work Streams, tasks, dependencies, exit criteria. This is the file Phase 4 reviews and Phase 5 finalizes, not a separate draft.
 
-*Template: [roadmap-template.md](templates/roadmap-template.md)*
-*Guide: [roadmap-draft.md](references/roadmap-draft.md)*
+_Template: [roadmap-template.md](templates/roadmap-template.md)_
+_Guide: [roadmap-draft.md](references/roadmap-draft.md)_
 
 ### Cost Estimate Checkpoint (after Phase 3, before Phase 4)
 
@@ -145,20 +146,24 @@ Priority order:
 
 Apply findings as edits to the existing sections they concern. Do not rewrite the file.
 
-*Detailed guide: [adversarial-review.md](references/adversarial-review.md)*
+_Detailed guide: [adversarial-review.md](references/adversarial-review.md)_
 
 ### Phase 5: Finalize & Quality Gate
 
 Phase 5 does **not** generate the roadmap — see Progressive Write Rule. It does two things, in order, before the user ever sees the roadmap:
 
 1. **Quality Gate**: Run the full checklist in [quality-gates.md](references/quality-gates.md) item-by-item against the living file. This is mandatory, not a passive reference — every unchecked item must be either fixed or explicitly logged as accepted debt. Record results in the roadmap's Completion Checklist section.
-2. **Present**: Only after the gate passes, present the finalized roadmap to the user.
+2. **Present**: Only after the gate passes, present the finalized roadmap to the user and ask:
 
-**STOP. Do not begin implementation without explicit user confirmation of the roadmap itself.**
+> Roadmap finalized. Hand off to execution or stop for manual review?
+> A) Hand off to execution
+> B) Stop here
 
-This confirmation is a separate decision from whether to hand off to execution — see the note at the top of [execution-handoff.md](references/execution-handoff.md). Do not combine the two into one question, and do not infer execution opt-in from roadmap approval.
+If A -> Proceed to **Execution handoff**.
+If B -> Declined → stop. Finalized roadmap = final deliverable..
 
-*Quality gates: [quality-gates.md](references/quality-gates.md)*
+_Execution handoff guide: [execution-handoff.md](references/execution-handoff.md)_
+_Quality gates: [quality-gates.md](references/quality-gates.md)_
 
 ### Phase 6: Post-Execution Retro (after handoff completes)
 
@@ -166,9 +171,9 @@ Only runs if execution-handoff was opted into and Final Review (execution-handof
 
 Compare the finalized roadmap against what actually happened: which tasks matched their Confidence Level and risk estimate, which F-ids/S-ids actually fired during implementation vs stayed theoretical, which exit criteria needed rework after the reviewer's first pass. Write findings to `.deep-plan/retro.md`.
 
-This is what makes gap analysis and confidence estimates sharper on the *next* plan — skipping it means every roadmap starts from zero calibration.
+This is what makes gap analysis and confidence estimates sharper on the _next_ plan — skipping it means every roadmap starts from zero calibration.
 
-*Detailed guide: [retro.md](references/retro.md)*
+_Detailed guide: [retro.md](references/retro.md)_
 
 ### Non-linear & Mid-Execution Flow
 
@@ -179,7 +184,7 @@ This is what makes gap analysis and confidence estimates sharper on the *next* p
 ## UI Projects
 
 If roadmap touches visual components, run UI review checklist after Phase 5.
-*Guide: [ui-review.md](references/ui-review.md)*
+_Guide: [ui-review.md](references/ui-review.md)_
 
 ## Common Failure Modes
 

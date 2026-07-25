@@ -5,12 +5,12 @@ unmaintainable. Apply the same standards regardless of code origin.
 
 ## 14.1 Guidelines
 
-| Rule                              | Guideline                  |
-|-----------------------------------|----------------------------|
-| Maximum lines per function        | < 50 (guideline)           |
-| Maximum nesting depth             | ≤ 3 control blocks         |
-| Single responsibility per function| Always, especially public  |
-| Prefer composition over nesting   | Always                     |
+| Rule                               | Guideline                 |
+| ---------------------------------- | ------------------------- |
+| Maximum lines per function         | < 50 (guideline)          |
+| Maximum nesting depth              | ≤ 3 control blocks        |
+| Single responsibility per function | Always, especially public |
+| Prefer composition over nesting    | Always                    |
 
 ## 14.2 When Complexity Is Necessary
 

@@ -1,32 +1,10 @@
 # Execution Handoff (Phase 5 → Implementation)
 
-Hand finalized roadmap to execution. Three rules: isolation, WS-level dispatch, review loops.
-
-> **This is a separate decision point from Phase 5's roadmap approval.** Phase 5 asks
-> "is this roadmap correct?" — that confirmation, on its own, is not consent to execute.
-> Section 1 below asks "should we execute it now?" and must be asked as its own
-> question, even if the user just approved the roadmap in the same breath. Never
-> infer a "yes" to Section 1 from a "yes" to the Phase 5 checkpoint — ask it explicitly
-> and wait for a distinct answer.
+Hand finalized roadmap to execution. Three rules: isolation, sprint-level dispatch, review loops.
 
 ---
 
-## 1. Opt-In
-
-Handoff optional. After roadmap finalized **and separately approved**, confirm with user:
-
-> Roadmap finalized. Hand off to execution or stop for manual review?
->
-> A) Hand off to execution
-> B) Stop here
-
-Declined → stop. Finalized roadmap = final deliverable.
-
-If the user's roadmap approval message already contains an unambiguous, explicit instruction to execute (e.g. "approved, go ahead and build it"), that counts — but a bare "approved" / "looks good" / "ok" does not. When in doubt, ask Section 1 anyway.
-
----
-
-## 2. Isolation Rule
+## 1. Isolation Rule
 
 **Never continue in same context that ran planning.**
 
@@ -36,112 +14,138 @@ Execution starts in fresh session/subagent. Reads only finalized roadmap file.
 
 ---
 
-## 3. Artifact Layout
+## 2. Artifact Layout
+
+**Dispatch unit is the Sprint** (from the roadmap's Implementation Order), not the Workstream. A Workstream (WS) is a conceptual grouping of tasks in the roadmap; a Sprint is the actual execution order after cross-WS dependencies are resolved. Since a single WS can split across multiple sprints (see Pre-Flight Scan), Sprint is the only grain that reflects real dispatch order — using both as separate handoff keys is redundant and a source of confusion.
+
+WS still shows up as metadata inside each brief (so you can trace a task back to its roadmap section), and as a lane suffix only when a sprint has multiple independent task lanes dispatched in parallel.
 
 All handoff artifacts live under `.deep-plan/handoff/`:
 
 ```
 .deep-plan/handoff/
-├── progress.md          # Ledger — survives compaction, tracks WS status
-├── WS1-brief.md         # Extracted WS block for implementer
-├── WS1-diff.md          # Git diff for reviewer
-├── WS1-report.md        # Implementer's output (tests, concerns)
-├── WS1-review.md        # Reviewer's verdict
-├── WS2-brief.md
-├── WS2-diff.md
-├── WS2-report.md
-├── WS2-review.md
+├── progress.md              # Ledger — survives compaction, tracks Sprint status
+├── Sprint1-brief.md         # Extracted task set for this sprint
+├── Sprint1-diff.diff        # Git diff for reviewer
+├── Sprint1-report.md        # Implementer's output (tests, concerns)
+├── Sprint1-review.md        # Reviewer's verdict
+├── Sprint2-brief.md
+├── Sprint2-diff.diff
+├── Sprint2-report.md
+├── Sprint2-review.md
 └── ...
 ```
 
-| Artifact | Created by | Contents |
-|----------|-----------|----------|
-| **Brief** | Controller (from roadmap) | Tasks + failure modes + security risks + exit criteria + sad paths for one WS |
-| **Diff** | Controller (git diff) | Commit list + stat summary + full diff for the WS |
-| **Report** | Implementer | What was done, exit criteria results, F-ids addressed, S-ids addressed, files changed, concerns |
-| **Review** | Reviewer | Spec verdict + quality verdict + failure modes & security table |
+If a sprint has parallel lanes (independent WS running concurrently within the same sprint), suffix the lane: `Sprint3-WS1-brief.md`, `Sprint3-WS3-brief.md` — but log a single `Sprint3` entry in `progress.md`, not one per lane, so the ledger still reads as one row per dispatch wave.
+
+| Artifact   | Created by                | Contents                                                                                        |
+| ---------- | ------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Brief**  | Controller (from roadmap) | Tasks + failure modes + security risks + exit criteria + sad paths for this sprint's task set    |
+| **Diff**   | Controller (via script)   | Commit list + stat summary + full diff for the sprint                                            |
+| **Report** | Implementer               | What was done, exit criteria results, F-ids addressed, S-ids addressed, files changed, concerns |
+| **Review** | Reviewer                  | Spec verdict + quality verdict + failure modes & security table                                 |
 
 ---
 
-## 4. Pre-Flight Scan
+## 3. Pre-Flight Scan
 
-Before dispatching WS1, scan the roadmap once for:
+Before dispatching Sprint 1, scan the roadmap once for:
 
 - Tasks that contradict each other or the plan's global constraints
 - Dependencies that form cycles
 - Exit criteria that can't be machine-verified
 
-Present findings as one batched question before execution begins. If clean, proceed without comment.
+**Dependency Graph ↔ Implementation Order cross-check (mandatory):**
 
-While scanning, also group work streams into dispatch waves from the Dependency Graph (see Section 5's parallel-dispatch note) — this is what Section 5 dispatches against, so do it once here rather than re-deriving it per WS.
+- Every task ID (`Tn`) that appears in the Dependency Graph must appear exactly once in the Implementation Order. A task missing from every sprint is a **dropped dependency** — stop and report before any dispatch, don't proceed silently.
+- For every task's declared dependency (`── Tx`), `Tx` must be scheduled in the same sprint or an earlier one. If `Tx` is referenced but never scheduled anywhere, that's the same dropped-dependency error above, just surfaced from the other direction — check both directions.
+- If a WS's tasks are split across multiple sprints (not dispatched as one contiguous block, e.g. a WS whose header lists dependencies on other WS but whose own tasks land in different sprints), verify each split task still only depends on tasks from its own or earlier sprints — a later-sprint task can't quietly depend on a same-WS task that got pushed to an even later sprint.
+
+> Present findings as one batched question before execution begins. If clean, proceed without comment.
+
+While scanning, also group tasks into sprint dispatch waves from the Dependency Graph and Implementation Order (see Section 4's parallel-dispatch note) — this is what Section 4 dispatches against, so do it once here rather than re-deriving it per sprint.
 
 ---
 
-## 5. Per-Workstream Dispatch Loop
+## 4. Per-Sprint Dispatch Loop
 
-For each workstream in dependency order — with one exception: **work streams the dependency graph marks as independent of each other may be dispatched in parallel**, each running its own 5a→5e loop concurrently. Only a WS with an unresolved dependency on another in-flight WS must wait. Check the roadmap's Dependency Graph section before dispatch to group WS into waves: everything with no unmet dependency in a wave goes out together, the next wave starts once its dependencies clear.
+For each sprint in Implementation Order — with one exception: **task lanes the dependency graph marks as independent of each other within the same sprint may be dispatched in parallel**, each running its own 4a→4e loop concurrently as a lane under that sprint. Only a lane with an unresolved dependency on another in-flight lane must wait.
 
-Sequential dispatch is still the default when the graph doesn't clearly separate independent work, or when running parallel dispatches would exceed what's practical to track in `progress.md` at once — parallelism is an optimization here, not an obligation.
+Sequential dispatch is still the default when the graph doesn't clearly separate independent lanes, or when running parallel lanes would exceed what's practical to track in `progress.md` at once — parallelism is an optimization here, not an obligation.
 
-### 5a. Extract WS Brief
+**Parallel lanes must be isolated**, not just diffed carefully after the fact: give each lane its own git worktree/branch off the same base commit. This is what makes Section 4c's ancestor check meaningful — without isolation, commits from concurrent lanes interleave in `git log` and a naive `BASE..HEAD` diff for one lane can silently capture another lane's changes.
 
-Controller reads the roadmap, extracts the WS block, writes to `.deep-plan/handoff/WS{n}-brief.md`:
+### 4a. Extract Sprint Brief
 
-1. Copy the WS section from the roadmap (tasks table, failure modes, security risks, exit criteria, sad paths)
-2. Copy relevant Architecture Decisions (D-ids) that affect this WS
-3. Copy WS dependencies from the dependency graph
-4. Write to `.deep-plan/handoff/WS{n}-brief.md`
+Controller reads the roadmap, extracts the task set for this sprint, and writes to `.deep-plan/handoff/Sprint{m}-brief.md` (or `Sprint{m}-{lane}-brief.md` for a parallel lane):
 
-### 5b. Dispatch Implementer
+1. Identify the task IDs scheduled in this sprint (from Implementation Order) — this may be a full WS or a subset of one
+2. Copy each task's row from the WS task table(s) it belongs to — if tasks come from more than one WS, pull from each source WS section, and note the source WS per task for traceability
+3. Copy relevant Architecture Decisions (D-ids) that affect these tasks
+4. Copy each task's dependencies resolved to specific task IDs (not "depends on WS1") — the brief should never require the implementer to re-derive dependencies from the graph
+5. Note which prior sprint(s) produced the dependencies listed, so the implementer knows what already exists to build on
+6. Include failure modes, security risks, exit criteria, and sad paths for these specific tasks
+7. Write to `.deep-plan/handoff/Sprint{m}-brief.md`
+
+### 4b. Dispatch Implementer
 
 Give the implementer subagent (use [implementer-prompt.md](implementer-prompt.md)):
 
-1. **WS brief path** — `.deep-plan/handoff/WS{n}-brief.md`
-2. **Context** — what earlier workstreams produced that this WS depends on
-3. **Decisions** — any D-ids that affect this WS (already in brief from 5a)
-4. **Report path** — `.deep-plan/handoff/WS{n}-report.md`
-5. **Working directory** — where to implement
+1. **Sprint brief path** — `.deep-plan/handoff/Sprint{m}-brief.md`
+2. **Context** — what earlier sprints produced that this sprint depends on
+3. **Decisions** — any D-ids that affect this sprint (already in brief from 4a)
+4. **Report path** — `.deep-plan/handoff/Sprint{m}-report.md`
+5. **Working directory** — where to implement (or the isolated worktree path, for a parallel lane)
 
 The implementer:
-- Implements all tasks in the WS
+
+- Implements all tasks in the sprint brief
 - Runs exit criteria verification commands
 - Writes report with test results, commits, and concerns
 - Returns: status + commit range + one-line test summary
 
 **Status handling:**
+
 - **DONE** → proceed to review
 - **DONE_WITH_CONCERNS** → read concerns, address if correctness/scope, note if observation, proceed to review
 - **NEEDS_CONTEXT** → provide missing context, re-dispatch
 - **BLOCKED** → assess: context problem (re-dispatch), needs more capability (upgrade model), plan wrong (escalate to user)
 
-### 5c. Generate Diff
+### 4c. Generate Diff
 
-Controller generates the diff file for the reviewer:
+Controller generates the diff file for the reviewer using the shared script rather than raw `git diff`, so the ancestor check and expected-files cross-check always run:
 
 ```bash
-git diff [BASE_SHA]..[HEAD_SHA] > .deep-plan/handoff/WS{n}-diff.md
-git log --oneline [BASE_SHA]..[HEAD_SHA] >> .deep-plan/handoff/WS{n}-diff.md
+script/generate-diff.sh \
+  --sprint {m} \
+  [--ws-lane WS{n}] \
+  --base [BASE_SHA] \
+  --head [HEAD_SHA] \
+  [--worktree [WORKTREE_PATH]]
 ```
 
-`BASE_SHA` = commit before this WS started. `HEAD_SHA` = current HEAD after implementer commits.
+`BASE_SHA` = commit before this sprint (or lane) started. `HEAD_SHA` = current HEAD after implementer commits. The diff is **raw** — no scoping, no filtering. The reviewer sees everything, including shared-file changes from parallel work. The script's only guardrail is the ancestor check: it refuses to diff if `BASE_SHA` is not an ancestor of `HEAD_SHA`.
 
-### 5d. Dispatch Reviewer
+Shared-file changes (orchestrator, runtime, typed wiring) in the diff are handled by the reviewer, not filtered by the diff generator — see `reviewer-prompt.md` §Shared Files.
+
+### 4d. Dispatch Reviewer
 
 Give the reviewer subagent (use [reviewer-prompt.md](reviewer-prompt.md)):
 
-1. **WS brief path** — `.deep-plan/handoff/WS{n}-brief.md`
-2. **WS report path** — `.deep-plan/handoff/WS{n}-report.md`
-3. **Diff path** — `.deep-plan/handoff/WS{n}-diff.md`
+1. **Sprint brief path** — `.deep-plan/handoff/Sprint{m}-brief.md`
+2. **Sprint report path** — `.deep-plan/handoff/Sprint{m}-report.md`
+3. **Diff path** — `.deep-plan/handoff/Sprint{m}-diff.diff`
 4. **Global constraints** — verbatim from roadmap (copy into prompt)
 
 The reviewer returns two verdicts:
-- **Spec compliance**: did implementer build what the WS tasks specify? Extra = bad, missing = bad.
+
+- **Spec compliance**: did implementer build what the sprint's tasks specify? Extra = bad, missing = bad.
 - **Code quality**: implementation soundness, no new failure modes introduced.
 - **Failure modes & security**: F-ids and S-ids addressed? Adequate?
 
-### 5e. Review Loop
+### 4e. Review Loop
 
-- Review passes → mark WS complete in progress.md, move to next WS
+- Review passes → mark sprint complete in progress.md, move to next sprint
 - Review fails → dispatch fix subagent with specific findings → re-review
 - Repeat until approved. Never skip re-review.
 
@@ -150,38 +154,39 @@ The reviewer returns two verdicts:
 Give the fix subagent:
 
 1. **Findings** — the Critical and Important issues from the reviewer's verdict
-2. **WS brief** — same brief the implementer used (for context)
-3. **WS report** — implementer's report (for what was done)
+2. **Sprint brief** — same brief the implementer used (for context)
+3. **Sprint report** — implementer's report (for what was done)
 4. **Diff** — the review diff (for what changed)
 
 The fix subagent:
+
 - Fixes all Critical and Important findings
 - Re-runs the tests covering its changes
-- Appends fix results to the same WS report file
+- Appends fix results to the same sprint report file
 - Returns: status + commits + test results
 
-After fix, re-dispatch the reviewer with the updated report and new diff.
+After fix, re-dispatch the reviewer with the updated report and new diff (regenerate via `script/generate-diff.sh`, don't hand-edit the old one).
 
-### 5f. Progress Ledger
+### 4f. Progress Ledger
 
-Append to `.deep-plan/handoff/progress.md` after each WS completes. When WS are dispatched in parallel, log each independently as it finishes — don't wait for the whole wave:
+Append to `.deep-plan/handoff/progress.md` after each sprint completes. When lanes are dispatched in parallel within a sprint, log the sprint as one entry, in progress until all its lanes clear:
 
 ```
-WS1: complete (commits abc1234..def5678, review clean)
-WS2: in progress (parallel wave with WS3)
-WS3: in progress (parallel wave with WS2)
+Sprint1: complete (commits abc1234..def5678, review clean)
+Sprint2: complete (commits def5678..a1b2c3d, review clean)
+Sprint3: in progress (lanes: WS1 done, WS3 in progress)
 ```
 
-This survives compaction. After any context loss, check the ledger and `git log` to resume — for a wave in progress, resume only the WS still marked in-progress, not the ones already complete.
+This survives compaction. After any context loss, check the ledger and `git log` to resume — for a sprint with lanes in progress, resume only the lanes still marked in-progress, not the ones already complete.
 
 ---
 
-## 6. Final Review
+## 5. Final Review
 
-After all workstreams complete, dispatch one final reviewer:
+After all sprints complete, dispatch one final reviewer:
 
-- Scope: cross-WS interactions, integration, overall plan compliance
-- Give it: full roadmap + all WS reports + all WS diffs
+- Scope: cross-sprint interactions, integration, overall plan compliance
+- Give it: full roadmap + all sprint reports + all sprint diffs
 - One fix subagent for all findings (not one per finding)
 
 ---
@@ -189,10 +194,11 @@ After all workstreams complete, dispatch one final reviewer:
 ## Anti-Patterns
 
 - **Auto-chaining** — starting implementation immediately after Phase 5. Skips user review.
-- **Merging checkpoints** — treating roadmap approval and the Section 1 opt-in as the same question.
 - **Same context** — writing code in planning session. Wastes tokens.
 - **Bare titles** — delegating task list without steps/exit criteria/sad paths.
-- **Per-task dispatch** — 10 tasks = 20+ subagent calls. Dispatch per WS instead.
+- **Per-task dispatch** — 10 tasks = 20+ subagent calls. Dispatch per sprint instead.
+- **WS as the dispatch key** — dispatching by Workstream when the roadmap's Implementation Order splits a WS across sprints causes dropped dependencies (a task scheduled in an earlier sprint than the WS-mate it depends on, or never scheduled at all). Sprint is the source of truth for order; WS is metadata.
+- **Unscoped diffs** — filtering the diff to hide shared-file changes from the reviewer. Shared files are integration points; hiding them breaks cross-sprint coordination. The reviewer handles shared files, not the diff generator.
 - **Skipping re-review** — reviewer found issues = implementer fixes = review again.
 - **Pasting context** — hand artifacts as files, not pasted text. Fresh subagent needs task + context, not session history.
 - **Ignoring ledger** — after compaction, trust the ledger and `git log` over recollection.

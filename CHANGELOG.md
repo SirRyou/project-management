@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-07-25
+
+### Added
+
+- **Sprint-based execution dispatch**: Replaced Workstream-bound subagent dispatch with Sprint-scoped ordering to preserve task dependency order across multi-sprint roadmaps.
+- **Automated diff generation tool** (`skills/deep-plan/script/generate-diff.sh`): Helper script with git ancestor validation (`git merge-base --is-ancestor`) to safely generate raw diff packages for reviewer handoffs.
+- **Subagent integrity audit pass**: Added strict verification in `reviewer-prompt.md` and `implementer-prompt.md` to catch anti-patterns like assertion-free tests, symptom masking, and test fixture overfitting.
+- **Staging guardrails**: Explicit `git add <file>` requirements in implementer prompts to prevent unintended commits of untracked assets.
+
+### Fixed
+
+- Fixed CLI flag parsing and validation in `generate-diff.sh` to support `--ws-lane` and sprint-only invocations.
+
 ## [2.2.1] - 2026-07-20
 
 ### Added
