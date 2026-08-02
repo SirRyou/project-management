@@ -72,12 +72,11 @@ Construct tentative roadmap. Work streams with tasks, dependencies, exit criteri
 
 ### Phase 4: Adversarial Review
 
-Run review using "outside voice" — different training perspectives catch blind spots.
+Run review using "outside voice" — different perspectives catch blind spots. Ask the user once which reviewer engines are available (e.g., `subagents`, `claude`, `codex`, `qwen`, `gemini`, or `none`).
 
-Priority order:
-1. CLI model in PATH (`claude`, `codex`, `ollama`, etc.)
-2. Subagent with different model provider
-3. Same-model subagent (must include explicit counter-bias checklist)
+- **Subagents**: Spawn fresh-context subagents sequentially (CTO review first, then Eng review).
+- **A named CLI**: Invoke the CLI non-interactively using stdin redirection (CTO review first, then Eng review).
+- **None/Unavailable**: Display prompts in copyable code blocks for manual execution by the user.
 
 Skip Phase 4 if Phase 2 yielded all `FIT`, 0 `CRITICAL`, and <=5 total gaps.
 
@@ -132,7 +131,7 @@ If roadmap touches visual components, run UI review checklist after Phase 5.
 This skill requires these capabilities from the host runtime:
 
 - **file-read**: Read source files, tracking docs, scope sources
-- **file-write**: Write `.deep-plan/plan.md` and references
+- **file-write**: Write `.deep-plan/<epic-name-in-kebab-case>.md` and references
 - **question**: Checkpoint confirmations with user (3 in Full Path, 1 in Quick Path)
 - **subagent** (optional): Adversarial review with different model
 - **web-search** (optional): External pattern research
@@ -199,10 +198,9 @@ Challenge on:
 6. RESOURCE LEAKS: Async lifecycle, event listener, resource issues?
 7. SECURITY: Missing input validation, permission checks, secret handling, trust boundary leaks?
 
-### Combined Pass (Quick Path / No Other Model)
+### No Outside Voice (Manual Fallback)
 
-Counter-Bias Checklist:
-- Challenge every assumption marked "assumed obvious" or "standard pattern".
-- Verify that every work package has a machine-executable verification step (tests/lint/cli).
-- Assume every network/database call can hang for 30s or return malformed JSON.
-- Assume inputs are crafted by an adversary seeking auth bypass or secret extraction.
+If the user declared "none", or the named engine is unavailable, the review is not skipped entirely:
+1. Render both the CTO and Eng reviewer prompts directly in the chat inside copyable code blocks.
+2. Ask the user to run them in their preferred LLM interface and paste the findings back.
+3. If skipped entirely by the user, record "None (Skipped)" in the Review Log and proceed.

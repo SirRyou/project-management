@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2026-08-02
+
+### Added
+- **Config-First Outside Voice Activation** (Phase 4): Replaced fragile environment auto-probing with a user-config query at the start of Phase 4 to declare reviewer engines.
+- **Sequential review flow with scope feedback**: Configured Eng Review (Pass 2) to run after CTO Review (Pass 1) so it can analyze the technical and dependency impact of high-level CTO recommendations (e.g., prunings or deletions).
+- **Manual review fallback**: Added copyable CLI review prompts in chat for the "none" engine selection, allowing users to run manual adversarial checks instead of skipping Phase 4 entirely.
+- **Restructuring step to roadmap draft** (Phase 3): Added Step 3.0 to guide the transition from the Phase 2 progressive append layout into the unified, nested layout defined in `templates/roadmap-template.md`.
+
+### Changed
+- **UI/UX Review triggering**: Moved the conditional UI/UX review from Phase 5 (Quality Gate) to Phase 4 (Adversarial Review) so UI/UX findings are evaluated and approved in a single unified checkpoint.
+- **Reference path updates**: Aligned script paths in handoff documents to point to `skills/deep-plan/script/generate-diff.sh` instead of `script/generate-diff.sh`.
+
 ## [2.3.0] - 2026-07-25
 
 ### Added

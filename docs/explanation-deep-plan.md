@@ -143,20 +143,14 @@ Some planners enforce a fixed workflow (Phase 1 → Phase 2 → ... → Phase 5)
 
 ## The "Outside Voice" Principle
 
-Deep Plan uses different model providers for adversarial review. Why?
+Deep Plan uses an "outside voice" for adversarial review to defeat self-confirmation bias. A model that drafted a plan is highly likely to rubber-stamp its own design. A fresh context or separate engine is much better at challenging assumptions.
 
-Different models have different training data, different biases, and different blind spots. A model that drafted a plan may not catch its own assumptions. A different model is more likely to challenge them.
+Rather than trying to auto-detect the environment (which is costly and fragile), Deep Plan uses a **config-first** approach: it asks the user once at the start of Phase 4 which review engines are available.
 
-Priority order:
-1. CLI model in PATH (`claude`, `codex`, `ollama`, etc.)
-2. Subagent with different model provider
-3. Same-model subagent (must include explicit counter-bias checklist)
-
-The counter-bias checklist for same-model review:
-- Challenge every assumption marked "assumed obvious" or "standard pattern"
-- Verify that every work package has a machine-executable verification step
-- Assume every network/database call can hang for 30s or return malformed JSON
-- Assume inputs are crafted by an adversary seeking auth bypass or secret extraction
+Available options:
+- **Subagents**: Spawn fresh-context subagents (sequentially) to review the plan under CTO and Engineering lenses. Fresh context alone defeats self-confirmation bias, even if using the same model family.
+- **External CLI**: Invokes a user-declared command-line utility (e.g. `claude`, `codex`, `qwen`, `gemini`) non-interactively via stdin redirection.
+- **None**: If no outside engine is available, the agent does not fake a same-context review. Instead, it outputs the full review prompts directly in the chat inside copyable blocks, allowing the user to easily copy-paste and run the review in their own browser/interface.
 
 ## Quality Gates
 
