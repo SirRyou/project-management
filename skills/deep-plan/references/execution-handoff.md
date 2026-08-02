@@ -116,7 +116,7 @@ The implementer:
 Controller generates the diff file for the reviewer using the shared script rather than raw `git diff`, so the ancestor check and expected-files cross-check always run:
 
 ```bash
-script/generate-diff.sh \
+skills/deep-plan/script/generate-diff.sh \
   --sprint {m} \
   [--ws-lane WS{n}] \
   --base [BASE_SHA] \
@@ -165,7 +165,7 @@ The fix subagent:
 - Appends fix results to the same sprint report file
 - Returns: status + commits + test results
 
-After fix, re-dispatch the reviewer with the updated report and new diff (regenerate via `script/generate-diff.sh`, don't hand-edit the old one).
+After fix, re-dispatch the reviewer with the updated report and new diff (regenerate via `skills/deep-plan/script/generate-diff.sh`, don't hand-edit the old one).
 
 ### 4f. Progress Ledger
 

@@ -234,7 +234,7 @@ Subagent (general-purpose):
 
 - `[BRIEF_FILE]` — REQUIRED: the sprint brief (same file the implementer used)
 - `[REPORT_FILE]` — REQUIRED: the implementer's report
-- `[DIFF_FILE]` — REQUIRED: review package file (generated via `script/generate-diff.sh`)
+- `[DIFF_FILE]` — REQUIRED: review package file (generated via `skills/deep-plan/script/generate-diff.sh`)
 - `[GLOBAL_CONSTRAINTS]` — binding requirements from roadmap (exact values, formats, relationships)
 
 ## Reviewer Returns

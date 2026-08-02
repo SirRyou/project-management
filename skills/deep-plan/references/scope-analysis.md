@@ -1,91 +1,60 @@
 # Scope Analysis (Phase 1)
 
-Guides the agent through Phase 1 (Understand Scope) of the deep-plan workflow.
+## Step 1: Pre-Flight & Context Discovery
+1. **Pre-flight Check:** Check git is initialized (`git rev-parse`). If yes, run `git status` and verify upstream alignment; warn the user if uncommitted changes or divergence exist. If not, note it and continue.
+2. **Project State:** Search root for existing planning files (`STATE.md`, `ROADMAP.md`, `CLAUDE.md`). Extract current project status and existing feature dependencies. If the files conflict, ask the user — never guess precedence.
+3. **Codebase Discovery:** Delegate to a subagent with `explore`/search capabilities to scan the codebase, avoiding direct file reading in the main agent's context window. Require the subagent to return:
+   - **Relevant files** (paths + one-line purpose)
+   - **Schemas** (DB/state shapes that constrain changes)
+   - **Patterns** (conventions new code must follow)
+   - **Tests** (existing coverage that could break)
+   - **Unverified unknowns** (library/API behavior not confirmable from the repo)
+4. **Discovery Record:** Keep the codebase findings and any unknowns in memory (or a temporary scratchpad). Do not write them to the file yet — the file is initialized in a single clean write in Step 3, including a `## Research Backlog` section for the unknowns.
 
 ---
 
-## Phase 1 — Load Context
-
-### 1A. Resolve Standards Source
-
-Search order:
-
-1. `references/resilience-first-development.md` in skill dir
-2. None found → use embedded generic standard in `gap-analysis.md`
-
-Project doc exists → read full, extract relevant sections per lens.
-
-### 1B. Read Scope Source
-
-Look for `STATE.md`, `ROADMAP.md`, or equivalent. Extract:
-
-```
-EPIC: [name]
-STATUS: [current state]
-DEPENDENCIES: [what this epic depends on]
-PREVIOUS PHASE SUMMARY: [what completed before]
-KNOWN GAPS: [explicit gaps or TODOs]
-```
-
-No tracking doc → ask user for epic name, status, dependencies.
-
-Multiple epics → ask which to plan.
-
----
-
-## Phase 1 → Phase 2 Checkpoint
-
-### Draft Scope Brief
+## Step 2: Synthesize Scope Brief
+Synthesize the brief. Under `## IN-SCOPE`, define each item as a distinct, atomic sub-feature or work package (these will serve as the sequential units of analysis for Phase 2). Use the following minimalist structure:
 
 ```markdown
-## Scope Brief: [Epic Name]
+# Scope Brief: [Epic Name]
 
-### Underlying Problem
+## PROBLEM
+[One sentence: the underlying problem being solved, not the literal prompt]
 
-One sentence: actual problem solved (not literal request).
+## OBJECTIVE
+[One paragraph: what this epic accomplishes]
 
-### Objective
+## IN-SCOPE
+* [item] - rationale
 
-One paragraph: what this phase accomplishes.
+## OUT-OF-SCOPE
+* [item] - rationale (deferred, out of bounds)
 
-### In Scope
+## BLOCKERS
+* [item] - must resolve before execution
 
-- [item] — reason
+## SYSTEM INVARIANTS & TRUST BOUNDARIES
+* [invariant/boundary] - area of concern (e.g. database transactions, auth rules)
 
-### Out of Scope
-
-- [item] — reason (defer / not this epic / already done)
-
-### System Invariants This Phase Must Preserve
-
-- [ ] [invariant] — tasks touching it
-
-### Trust Boundaries This Phase Touches
-
-- [ ] [boundary] — tasks crossing it
-
-### Assumptions
-
-- [assumption that breaks scope if wrong]
+## ASSUMPTIONS
+* [assumption] - project risk if wrong
 ```
 
-### Checkpoint — Confirm with User
+---
 
-**STOP. No Phase 2 without explicit confirmation.**
+## Step 3: Stop & Confirm
+1. **Hard Stop:** Present the text of the Scope Brief in the chat.
+2. **Blocker first:** If BLOCKERS is non-empty, call it out on its own line before the rest of the brief:
+   > This can't proceed until [X] is resolved. Options: resolve it now, proceed as accepted debt (moved to OUT-OF-SCOPE), or stop here.
+   Get an explicit answer on the blocker before the general confirmation.
+3. Ask: `"Scope brief ready. Confirm or request changes?"`
+4. **Single Clean Write:** Upon explicit user confirmation, write the complete package to `.deep-plan/<epic-name-in-kebab-case>.md` in a single write operation. Order: `Scope Brief`, then `## Codebase Context` (the Step 1 fields), then `## Research Backlog` placeholder (Phase 2 logs `R{n}` items here). This avoids write collisions and ensures a clean, organized layout.
 
-Present the scope brief and ask user to confirm or request changes.
+---
 
-User requests changes → update brief, present again, repeat checkpoint.
-Confirmed → proceed to Phase 2.
-
-> **Why hard:** Scope creep during enumeration is the number one cause of bloated roadmaps. Lock here prevents gap-found temptations.
-
-### Scope Unlock Trigger
-
-Lock not permanent. If Phase 2 discovers MISFIT or CRITICAL invariant violations:
-
-1. **Auto-unlock**: Lock breaks. Gap analysis pauses.
-2. **Re-scope**: Present findings to user. Update scope brief (add/remove/accept as debt).
-3. **Re-lock**: User confirms updated scope. Gap analysis resumes.
-
-> **Why:** Lock prevents casual creep. Genuine discoveries (MISFIT/CRITICAL) = gap analysis doing its job. Forcing wrong scope = plan solves wrong problem.
+## Scope Unlock Trigger
+If Phase 2 gap analysis finds critical misfits:
+1. Pause the analysis.
+2. Update the scope brief with the user to reflect findings (add/remove items).
+3. Lock the scope again and resume Phase 2.

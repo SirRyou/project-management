@@ -4,184 +4,219 @@ Brutal review of draft plan before finalization. Two passes: CTO lens, Eng lens.
 
 ---
 
-## 1. Detect Review Path
+## 1. Outside Voice Activation (Config-first)
 
-Run this detection before choosing a path — do not reason about availability without running it:
+A real outside voice is a reviewer that did **not** draft the plan. Do NOT probe the environment — ask the user once, at the start of Phase 4.
 
-```bash
-DRAFTING_MODEL="<model that drafted this plan, e.g. claude>"
-FOUND=()
-for m in claude codex gemini ollama opencode; do
-  if command -v "$m" >/dev/null 2>&1; then
-    FOUND+=("$m")
-  fi
-done
-echo "Detected CLIs: ${FOUND[*]:-none}"
-echo "Drafting model: $DRAFTING_MODEL (excluded from candidates)"
-```
+**Ask the user (single question):**
 
-Then filter `FOUND` to exclude `DRAFTING_MODEL` itself — a CLI that matches the model currently drafting/reviewing is not an outside voice, even if it's technically present in PATH.
+> Which reviewer engines are available? Name them: e.g. "subagents", "claude", "codex", "qwen", "gemini", or "none".
 
-Priority: use a model **different from the one that drafted the plan** — different training catches different blind spots.
+Use the answer verbatim — no detection ladder:
+- **Subagents** → Sections 2/3 run fresh-context reviewers using the agent's subagent mechanism.
+- **A named CLI** (e.g. `claude`, `codex`, `qwen`) → Section 1b invokes it non-interactively.
+- **None** → Section 8: no outside voice, warn and skip.
 
-### Path Selection
-
-- **`FOUND` minus drafting model is non-empty** → use the first one directly. Strongest outside voice.
-- **`FOUND` minus drafting model is empty, but a subagent with a different model provider is available** → spawn it.
-- **No other model at all** (only the drafting model's own CLI/API is available) → spawn same-model subagent with fresh context. Warn user: "No other model provider detected. Review uses same-model — bias caveat applies. Findings may reflect same training blind spots."
-
-### Timeout handling
-
-CLI tools may time out on large plans. If no output received:
-
-1. Increase timeout (150s+)
-2. Try interactive mode — have the reviewer write findings to a file you can read
-3. If credits exhausted, fall back to subagent
+If the user names more than one, prefer the external CLI for at least one pass. Record the engine actually used in the Review Log (Section 4 step 2).
 
 ---
 
-## 1a. Build the Reviewer Digest (once, before either pass)
+## 1b. External CLI Review
 
-Extract the reviewer digest from the living roadmap file per `roadmap-draft.md`'s "Reviewer Digest" format — do this **once**, before Section 2. Both the CTO pass and the Eng pass consume this same digest; don't re-extract it separately for Section 3. If Phase 4 amendments require an updated digest partway through (e.g. after Section 4.1 modifications), regenerate it once at that point, not per-pass.
+For each pass (CTO in Section 2, Eng in Section 3), build the reviewer prompt as one text block: role instructions + the relevant digest. Invoke the user-declared CLI non-interactively:
+1. Write the prompt content to a temporary file (e.g., `.deep-plan/tmp_review_prompt.txt`) to avoid command-line length limits.
+2. Check CLI flags using `<cli> --help`. If the CLI fails to execute or is not installed, output a warning and fall back to Section 8.
+3. Run the CLI by redirecting/piping the file: e.g., `Get-Content .deep-plan/tmp_review_prompt.txt | <cli>` (on Windows) or `<cli> < .deep-plan/tmp_review_prompt.txt` (on Unix/macOS). Capture stdout as the findings.
+4. Delete the temporary file immediately after execution.
+5. A different model family is a bonus; a fresh trace is what counts. If the CLI shares the drafter's model family (e.g., `claude` matching Claude, or `gemini` matching Gemini), note it in the Review Log.
+
+---
+
+## 1a. Build the Reviewer Digests (once, before passes)
+
+Extract from the living roadmap file (`.deep-plan/<epic-name-in-kebab-case>.md`) and hold in memory:
+
+### 1. CTO Digest (High-Level Product & Scope Focus)
+*Exclude all implementation details, files, folders, and SDK mentions.* Include only:
+- **PROBLEM** & **OBJECTIVE**
+- **IN-SCOPE / OUT-OF-SCOPE** boundaries
+- **Workstreams** (WS name, WS Objective, WS Dependencies, WS Risk/Confidence Summary)
+
+### 2. Eng Digest (Full Technical Detail)
+Include all technical details:
+- **CTO Digest** contents
+- **Codebase Context** (existing relevant files, patterns observed, DB schemas)
+- **Architecture Decisions** (ID, decision, rationale, status)
+- **Tasks tables** (T1.1, T1.2, dependencies, verification commands)
+- **Sad Paths** & **Exit Criteria**
+
+This digest is disposable.
 
 ---
 
 ## 2. CTO Review (Pass 1)
 
-**Full Path with an outside model available (Path Selection above resolved to "different-model CLI" or "different-provider subagent") always runs Section 2 and Section 3 as two separate reviewer invocations.** Do not merge them into one prompt and do not substitute Section 6's combined pass here — Section 6 exists only for the two conditions named in its own heading (Quick Path's own workflow, or the no-other-model fallback). If you're tempted to combine passes to save tokens while an outside model is available, that's the collapse this note exists to stop.
+**Delegation Protocol:**
+1. Run the reviewer via the engine declared in Section 1 — fresh-context subagent (Role: `CTO Reviewer`) or the user-named external CLI (Section 1b).
+2. Prompt the reviewer with the role instructions below, passing the **CTO Digest**.
+3. Keep the findings in memory. Do **NOT** edit the roadmap file.
 
-Give reviewer this role — be BRUTAL:
+Same model as the drafter is fine — fresh context defeats self-confirmation bias, not the provider.
 
+**CTO Reviewer Instructions:**
+```text
+Goal: Prove this plan should NOT exist.
+You are rewarded for deleting work. Assume engineering resources are scarce.
+
+You are a skeptical CTO reviewing an engineering phase plan. Your job is NOT to validate it — find every problem-fit, scope, assumption, and prioritization issue before engineering wastes time on the wrong thing.
+
+Questions to answer:
+- Which workstream can disappear entirely?
+- Which milestone has no measurable business value?
+- Which assumption has no evidence?
+- What is the smallest plan solving 80% of the problem?
+- Which task belongs to a future phase?
+
+Never discuss implementation.
+
+Here is the CTO digest:
+[CTO Digest]
 ```
-You are a skeptical CTO reviewing an engineering phase plan. Your job is NOT
-to validate it — find every problem-fit, scope, assumption, and prioritization
-issue before engineering wastes time on the wrong thing.
-
-Challenge on:
-1. PROBLEM-FIT: Does plan solve underlying problem, or just literal request?
-2. SCOPE: Boundary right? What's missing? What's bloat?
-3. ASSUMPTIONS: List every implicit assumption. Which wrong or unvalidated?
-4. SEQUENCING: Right first thing? Real critical path?
-5. OVER-ENGINEERING: What's solving hypothetical problem, not real one?
-
-For each finding: name it, explain why, propose change. Be brutal.
-
-Here is the plan (the digest built in Section 1a):
-[reviewer digest]
-```
-
-**After CTO review**: validate findings, apply as edits to the relevant sections of the living roadmap file — do not rewrite the whole file.
 
 ---
 
 ## 3. Eng Review (Pass 2)
 
-Give reviewer this role — be BRUTAL:
+**Delegation Protocol:**
+1. This pass MUST run after the CTO Review (Pass 1) is complete.
+2. If the CTO Review produced any findings (e.g., recommending deleting a workstream, changing scope boundaries, or highlighting assumptions without evidence), append these findings to the **Eng Digest** under a new section `## CTO Scope Findings`.
+3. Run the reviewer via the engine declared in Section 1 — fresh-context subagent (Role: `Security & Eng Reviewer`) or the user-named external CLI (Section 1b).
+4. Prompt the reviewer with the role instructions below, passing the **Eng Digest** (which now includes the CTO findings).
+5. Keep the findings in memory. Do **NOT** edit the roadmap file.
 
+**Eng Reviewer Instructions:**
+```text
+Goal: Break this implementation.
+Assume production traffic. Assume hostile inputs. Assume partial failures.
+
+You are a senior engineer doing technical + security adversarial review. Scope/problem-fit review already done. Your job is to locate architecture, implementation risk, resilience, and security issues.
+
+If the CTO reviewer recommended deleting any workstreams or changing scope boundaries (listed under "CTO Scope Findings" in the digest), analyze the technical implications of those changes (e.g., broken dependencies in remaining tasks, required adjustments to other workstreams).
+
+Find:
+- Hidden dependency (including dependencies broken if a CTO-recommended deletion occurs)
+- Race condition
+- Timeout
+- Cancellation
+- Retry
+- Observability
+- Migration
+- Rollback
+- Testing
+- Resource leak
+- SDK behavior
+- Security
+
+For each finding: name it, cite the specific task, explain the risk, and propose a fix.
+
+Here is the Eng digest (including any high-level recommendations from the CTO review):
+[Eng Digest]
 ```
-You are a senior engineer doing technical + security adversarial review.
-Scope/problem-fit review already done. Your job: architecture, implementation
-risk, resilience, security.
-
-Challenge on:
-1. HIDDEN DEPENDENCIES: Dependencies between tasks author missed?
-2. SDK/LIBRARY RISKS: Third-party behaviors invalidating approach?
-3. OVER-CONFIDENCE: Tasks marked High/Medium confidence but risky?
-4. MISSING TASKS: Implementation work implied but not listed?
-5. TESTING GAPS: Exit criteria can't actually be verified?
-6. RESOURCE LEAKS: Async lifecycle, event listener, resource issues?
-7. SECURITY: Missing input validation, permission checks, secret handling,
-   trust boundary leaks? Where would adversarial input break assumptions?
-
-For each finding: name it, cite specific task, explain risk, propose fix.
-
-Here is the plan (same digest from Section 1a — reused, not re-extracted):
-[reviewer digest]
-```
-
-**After Eng review**: combine with CTO findings, apply as edits to the living roadmap file.
 
 ---
 
-## 4. Review Checkpoint
+## 3a. Confidence Arbitration (The Judge)
+This pass acts as an arbiter to reject weak recommendations and prevent architecture astronautics or speculative over-engineering.
 
-After both passes, confirm with user:
+Compile the CTO and Eng findings and run all of them through this filter. Keep decisions in memory. Do **NOT** write to the file.
 
-> Review passes complete. Check findings above.
->
-> A) Findings correct. Proceed to amendment compilation.
-> B) Need to modify or reject some findings.
+**Judge Instructions:**
+```text
+Goal: Reject weak recommendations.
 
-### 4.1 Modifying the plan
+For every reviewer finding, you must run the Confidence Arbitration Filter:
+1. Finding: [The reviewer's suggested change/risk]
+2. Evidence: [The concrete file path, requirement, API constraint, or DB schema that proves this is a real issue. If none, write "None"]
+3. Confidence: [High / Medium / Low (Low if Evidence is "None")]
+4. Decision: [Accepted (High confidence) | Rejected (Low confidence) | Needs human decision (Medium confidence)]
 
-If user wants to modify or reject findings, discuss and ask why. Once resolved, re-present for confirmation.
+Reject speculative improvements, architecture astronautics, future-proofing without evidence, and complexity not proportional to project size.
+
+Evidence the judge cannot confirm from its own memory of the project → Needs Human Decision, not Accepted.
+```
 
 ---
 
-## 5. Amendment Compilation
+## 4. Amendment Compilation & Checkpoint (Single Stop)
+After the Confidence Arbitration Judge compiles the findings:
 
-Compile findings:
+Format the Judge's Decisions:
 
 ```markdown
-## Amendments
+## Judge's Decisions & Amendments
 
-From CTO Review:
+### Accepted (Confidence: High)
+- **Finding:** [finding]
+  - Evidence: [evidence]
+  - Change: [change]
 
-- [finding] → [change] / REJECTED: [reason]
+### Needs Human Decision (Confidence: Medium)
+- **Finding:** [finding]
+  - Evidence: [evidence]
+  - Options/Change: [change]
 
-From Eng Review:
-
-- [finding] → [change] / REJECTED: [reason]
+### Rejected (Confidence: Low)
+- **Finding:** [finding]
+  - Reason: [reason/lack of evidence]
 ```
 
-Confirm with user:
+### Critical Design Questions Rule
+If the Judge marks any finding as "Needs Human Decision" or identifies any unresolved architectural contradictions, you **must** extract these as explicit questions:
 
-> Amendment list correct? Override or add anything?
+```markdown
+### Critical Design Questions:
+1. [Question] - Why: [contrasting view or risk]
+```
+
+**STOP. Present this list directly in the chat:**
+
+> Review passes and Confidence Arbitration complete. Proposed amendments and critical design questions compiled:
 >
-> A) Correct. Write final roadmap.
-> B) Need changes to amendment list.
+> [Proposed Amendments: Accepted / Needs Human / Rejected]
+> [Critical Design Questions]
+>
+> Please answer the critical questions and choose an option:
+> A) Accept all Accepted amendments → Apply them to the tasks and scope in the roadmap file (`.deep-plan/<epic-name-in-kebab-case>.md`) and proceed to Phase 5.
+> B) Reject/modify specific findings → Discuss changes with the user, update the list, and write only the approved amendments.
 
-User requests changes → update draft, present again, repeat checkpoint.
+### How to Apply Approved Amendments to the Living File:
+Once the amendments are approved by the user:
+1. **Targeted Edits:** Use code-editing tools (e.g., `replace_file_content`) to directly modify the affected sections (Scope, Tasks, Sad Paths, Exit Criteria) in the living `.deep-plan/<epic-name-in-kebab-case>.md` file. Do NOT rewrite the entire file from scratch.
+2. **Update the Review Log:** Locate the `## Review Log` table at the bottom of the roadmap file (defined in `templates/roadmap-template.md`). Fill in the details of this review pass (model, mode, number of findings, status = "Cleared").
+3. **Audit Trail:** Append the finalized `## Judge's Decisions & Amendments` section to the end of the file, providing a permanent record of the review outcomes.
+
+**Important:** Do **NOT** edit or write to the living roadmap file until the user has explicitly answered the critical questions and selected A or approved B. All intermediate findings are held in memory.
 
 ---
 
-## 6. Combined Pass — Fallback Only
+## 5. (Reserved)
 
-**This section applies to exactly two situations, and no others: (a) Quick Path's own workflow (see `quick-path.md`), or (b) Full Path where Path Selection above found no other model at all.** If Full Path has a different-model CLI or subagent available, Sections 2 and 3 run as two separate passes — see the guard note at the top of Section 2. Do not reach for this section just because a single pass is cheaper.
+---
 
-When (a) or (b) applies → merge CTO + Eng into single pass with explicit Counter-Bias Instructions:
-
-```
-You are a skeptical CTO and Senior Principal Architect performing an adversarial review.
-UNLIKE NORMAL REVIEWS, you are explicitly primed to hunt for self-confirmation bias.
-
-Counter-Bias Checklist:
-- Challenge every assumption marked "assumed obvious" or "standard pattern".
-- Verify that every work package has a machine-executable verification step (tests/lint/cli).
-- Assume every network/database call can hang for 30s or return malformed JSON.
-- Assume inputs are crafted by an adversary seeking auth bypass or secret extraction.
-
-Analyze on:
-1. PROBLEM-FIT: Solves underlying problem or just literal request?
-2. SCOPE & BOUNDARIES: Right scope? Bloat? Missing?
-3. ASSUMPTIONS & SEQUENCING: Implicit assumptions? Correct work stream order?
-4. RESILIENCE: Missing fail-safe, timeout, retry, fallback?
-5. SECURITY: Unvalidated inputs, auth bypass, secret exposure, trust boundary leaks?
-
-Propose concrete changes for each issue. Be critical.
-
-Here is the plan:
-[plan content]
-```
+## 6. Combined Pass
+Removed. Same-context self-review rubber-stamps the draft it just wrote. If no subagent is available, see Section 8.
 
 ---
 
 ## 7. Conditional — UI/UX Lens
-
-If scope has UI/frontend/mockup/component work → run the UI review checklist from `references/ui-review.md`. Findings are additive to the amendment list.
+If the roadmap includes UI/frontend/mockup/component work, run the UI review checklist from `references/ui-review.md`. Findings are additive to the amendment list and included in the Section 3a / Section 4 checkpoint. Do **NOT** write to the file.
 
 ---
 
-## 8. Tool Fallback
+## 8. No Outside Voice
 
-Any helper missing or fails → fall back to manual review or skip if not critical to final plan.
+If the user declared "none", or the named engine isn't available, tell the user Phase 4 has no outside voice.
+1. Render both the CTO and Eng reviewer prompts directly in the chat inside copyable code blocks (with the digests filled in).
+2. Instruct the user: "You can copy these prompts into an external LLM interface of your choice to perform a manual review. Paste the findings back here when finished."
+3. If the user decides to skip manual review entirely, record "None (Skipped)" in the Review Log and proceed to Section 4 without findings.
+4. Do not fake a combined pass in the current context.

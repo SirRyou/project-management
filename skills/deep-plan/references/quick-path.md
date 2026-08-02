@@ -6,7 +6,7 @@ Deep Plan Quick Path is a lightweight, linear workflow to produce resilient, pro
 
 ## When to Use
 
-Use this skill when ():
+Use this skill when:
 
 - Logic sequencing is linear or independent (<=3 steps).
 - Changes are stateless, pure additions, or isolated logic.
@@ -51,13 +51,16 @@ Analyze the codebase and requirements under three lenses:
 
 If a new blocker surfaces here that wasn't visible at Step 1 (e.g. gap analysis reveals a missing credential or external dependency), don't silently carry it into the draft — apply the same stop-and-ask from Step 1 before continuing to Step 3.
 
+**Escalation Gate (Hard Rule):**
+If the Gap Analysis identifies any `CRITICAL` risk (e.g., auth, permissions, PII), a `MISFIT` status, or if the total work is estimated to exceed 15 tasks, you **must** halt the Quick Path immediately, notify the user, and escalate to the Full Path starting at Phase 2 (Adversarial Gap Enumeration).
+
 ---
 
 ### Step 3: Draft, Review & Finalize Roadmap
 
 1. **Draft Plan**: Outline work streams with high-level tasks, dependencies, and exit criteria.
 2. **Adversarial Review**: Run a quick review pass using a different model (or a same-model subagent with a fresh context) to challenge the draft on edge cases, over-engineering, and security gaps.
-3. **Final Roadmap**: Write the final roadmap to `.deep-plan/<epic/feature-name>.md` using the template below.
+3. **Final Roadmap**: Write the final roadmap to `.deep-plan/<epic-name-in-kebab-case>.md` using the template below.
 
 **Iron Law checkpoint**: presenting the Final Roadmap is not the same as approval. Per SKILL.md's Iron Law, do not begin implementation — do not start editing code — until the user has explicitly confirmed the roadmap. Present it and stop; wait for a real reply, not just the act of writing the file.
 

@@ -12,7 +12,7 @@ Only after execution-handoff.md's Section 6 (Final Review) has completed for eve
 
 Pull from three sources:
 
-- The finalized roadmap (`.deep-plan/<feature-plan>.md`) — Confidence Table, Tasks, Failure Modes, Security Risks
+- The finalized roadmap (`.deep-plan/<epic-name-in-kebab-case>.md`) — Confidence Table, Tasks, Failure Modes, Security Risks
 - Every `WS{n}-report.md` — what the implementer actually did, concerns raised
 - Every `WS{n}-review.md` — what the reviewer actually found
 

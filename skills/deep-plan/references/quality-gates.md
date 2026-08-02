@@ -12,5 +12,6 @@ Before saving and presenting the final roadmap, verify the following:
 - [ ] **Gap Mitigations**: All critical/high failure modes and security risks have explicit mitigation tasks.
 - [ ] **Machine Verification Commands**: Every task has a machine-executable verification command (e.g. `npm test`, `pytest`, `cargo test`, `git diff`) — no subjective "looks good" text.
 - [ ] **Invariant Assertions**: System invariants are explicitly checked before and after execution steps.
-- [ ] **Git-Aware Versioning**: The roadmap is updated incrementally in the living `.deep-plan/<feature-plan>.md` file.
+- [ ] **Git-Aware Versioning**: The roadmap is updated incrementally in the living `.deep-plan/<epic-name-in-kebab-case>.md` file.
+- [ ] **Template Match**: The finalized roadmap file is organized according to the structure defined in `templates/roadmap-template.md` (Context, Objectives, Scope, Invariants, Architecture Decisions, Work Streams (with nested Failure Modes, Security Risks, Tasks, Sad Paths, Exit Criteria), Cross-Cutting Work, Dependency Graph, Implementation Order, Risks, Research Backlog, and Review Log).
 - [ ] **User Agreement**: All adversarial review findings are resolved and confirmed by the user.

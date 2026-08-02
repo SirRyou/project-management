@@ -30,7 +30,7 @@ If any of these conditions are met, the Design/UI-UX review is **mandated**.
 ## 3. How Findings Integrate
 
 - **Additive**: UI/UX findings supplement the Eng/Security review. They do not replace it.
-- **Compilation**: Add findings to the amendments list:
+- **Compilation**: Add findings to the Phase 4 checkpoint amendments list:
 
 ```markdown
 From Design/UI-UX Review:
@@ -38,4 +38,4 @@ From Design/UI-UX Review:
 - [Design finding/gap] → [What changes in task or style] / REJECTED: [Reason]
 ```
 
-- **Confirmation**: Present the combined amendments list (Scope + Eng/Security + UI/UX) to the user for final approval.
+- **Confirmation**: Present the findings as part of the Section 3a / Section 4 checkpoint for user confirmation. Do NOT write findings to the file before approval.

@@ -26,7 +26,7 @@ Do NOT erase the existing roadmap or restart from Phase 1. Perform targeted incr
 3. **Execute Mini-Adversarial Pass (Phase 4 Delta)**:
    - Validate proposed roadmap adjustment against existing system invariants.
 4. **Update Active Plan**:
-   - Insert delta work package into active `.deep-plan/plan.md`.
+   - Insert delta work package into active `.deep-plan/<epic-name-in-kebab-case>.md`.
    - Re-sequence downstream dependencies.
 5. **Resume Handoff Checkpoint**:
    - Present delta changes to user for confirmation before resuming execution.
