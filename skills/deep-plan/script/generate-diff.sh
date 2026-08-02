@@ -8,7 +8,13 @@
 # Generates the raw BASE..HEAD diff. Does NOT scope or filter — the
 # reviewer sees everything, including shared-file changes from parallel
 # work. The ancestor check is the only guardrail: it catches stale
-# BASE_SHA before the diff reaches the reviewer.
+# BASE_SHA before the base reaches the diff.
+#
+# NOTE: The output path OUT_DIR (default ".deep-plan/handoff") is
+# relative to the current working directory — NOT the --worktree. Runs of
+# the script with --worktree are resolved for git, but the diff still
+# lands in the caller's cwd. If you want the artifacts beside the
+# worktree, pass an absolute --out-dir or cd into the worktree first.
 
 set -euo pipefail
 
