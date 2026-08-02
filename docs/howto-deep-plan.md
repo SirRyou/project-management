@@ -91,22 +91,24 @@ Agent: Draft roadmap:
 
 ### 6. Phase 4: Adversarial Review
 
-The agent runs the plan by a different model (or same model with fresh context):
-- **CTO Review**: Scope, assumptions, sequencing
-- **Eng Review**: Technical risks, security, testing gaps
+At the start of Phase 4 the agent asks which reviewer engines are available (config-first; e.g. `subagents`, a named CLI like `claude`/`codex`/`qwen`/`gemini`, or `none`) — it does not probe the environment. Based on the answer it runs two passes **sequentially**:
+
+- **Pass 1 — CTO Review**: Scope, assumptions, sequencing. Findings (e.g. "delete this workstream") are handed to the Eng pass.
+- **Pass 2 — Eng Review**: Technical risks, security, testing gaps — analyzed against the CTO's recommendations so broken dependencies from a deletion are caught.
+- **`none` engine**: the agent renders both review prompts in copyable blocks so you can run them in any external LLM and paste the findings back — Phase 4 is not silently skipped.
+
+UI/frontend work also triggers a conditional UI/UX checklist, folded into the same amendment checkpoint.
 
 **Example:**
 ```
-Agent: CTO review found 2 issues:
-      1. Scope too broad (suggest splitting into 2 epics)
-      2. Missing assumption: API rate limits not considered
-
-      Eng review found 3 issues:
-      1. Hidden dependency: WS3 needs WS2 to complete first
-      2. Testing gap: No integration test plan
-      3. Security: Missing CSRF protection
-
-      Amendments compiled. Ready for finalization.
+Agent: Which reviewer engines are available? (subagents / claude / codex / qwen / gemini / none)
+You: none
+Agent: Copy these two prompts (CTO + Eng) into an external LLM and paste findings back.
+You: [findings]
+Agent: Amendments cross-checked by a Confidence Gate (judge). compile:
+      - CTO: scope too broad — split into 2 epics
+      - Eng: hidden dependency — WS3 needs WS2 first
+      - Ready for your A/B decision.
 ```
 
 ### 7. Phase 5: Finalize Roadmap

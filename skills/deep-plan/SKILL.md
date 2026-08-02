@@ -39,7 +39,7 @@ For each phase, read its reference file **only** when starting that phase.
 2. Break down tasks. Flag if >8 streams or >30 tasks.
 
 ### Phase 4: Adversarial Review
-1. Skip if Phase 2 had 0 critical gaps and <=5 gaps.
+1. Skip Phase 4 only if Phase 2 yielded all `FIT` (no MISFIT/PARTIAL_FIT), 0 `CRITICAL`, and <=5 total gaps.
 2. Read [adversarial-review.md](references/adversarial-review.md) to stress-test the draft.
 3. If UI/frontend work is present, also read and execute [ui-review.md](references/ui-review.md), appending its findings to the Phase 4 checkpoint.
 

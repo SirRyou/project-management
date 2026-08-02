@@ -5,8 +5,7 @@
 ---
 
 ## Step 3.0: Reorganize to Roadmap Template
-
-Before drafting workstreams, reorganize the existing Phase 1 Scope Brief and Phase 2 Gap Analysis findings into the unified structure defined in [roadmap-template.md](../templates/roadmap-template.md):
+Before drafting workstreams, reorganize the existing Phase 1 Scope Brief and Phase 2 Gap Analysis findings into the unified structure defined in [roadmap-template.md](templates/roadmap-template.md):
 1. **Context & Invariants**: Group the problem, objective, scopes, assumptions, codebase context, and invariants at the top of the file.
 2. **Architecture Decisions**: Create a `## Architecture Decisions` table for recording cross-cutting design decisions made during planning.
 3. **Work Stream Sections**: For each deliverable workstream you group:

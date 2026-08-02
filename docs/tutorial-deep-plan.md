@@ -124,28 +124,21 @@ Agent: Phase 3: Draft Roadmap
 
 ## Step 6: Phase 4 — Adversarial Review
 
-The agent runs the plan by a different model:
+The agent first asks which reviewer engines are available (config-first — `subagents`, a named external CLI, or `none`), without probing the environment. Then it runs two passes **sequentially**:
 
+- **CTO Review**: scope, assumptions, sequencing — findings feed the Eng pass
+- **Eng Review**: technical risks, security, testing gaps, checked against any CTO deletion/scope recommendations
+
+If the user answers `none`, the agent renders both prompts in copyable blocks for the user to run in any external LLM.
+
+**Example:**
 ```
-Agent: Phase 4: Adversarial Review
-
-      CTO Review:
-      1. Scope too broad — consider splitting into "auth core" and "session management"
-      2. Missing assumption: what happens when tokens expire mid-request?
-      3. Sequencing: password hashing should come before token generation
-
-      Eng Review:
-      1. Hidden dependency: T3 (session management) needs T2 (token validation)
-      2. Testing gap: no integration test plan
-      3. Security: missing rate limiting on login attempts
-
-      Amendments:
-      - Split scope into 2 phases (auth core, then session management)
-      - Add token refresh logic to T2
-      - Add rate limiting to T6
-      - Add integration test plan
-
-      Ready for finalization.
+Agent: Which reviewer engines are available? (subagents / claude / codex / qwen / gemini / none)
+You: none
+Agent: [renders CTO + Eng prompts in copyable blocks]
+You: CTO: 1. Scope too broad — split into "auth core" and "session management". 2. Sequencing: hashing before token generation.
+      Eng: 1. Hidden dependency: session management needs token validation. 2. No integration test plan.
+Agent: Amendments arbitration (Judge) + checkpoint. Confirms with you before applying.
 ```
 
 ## Step 7: Phase 5 — Finalize Roadmap

@@ -94,15 +94,15 @@ After user confirms roadmap, hand off to execution via subagent-driven workflow:
 
 1. **Opt-in** — confirm with user: hand off or stop
 2. **Isolation** — fresh session, reads only roadmap file
-3. **Pre-flight scan** — check for plan contradictions before execution
-4. **Per-WS dispatch loop** (in dependency order):
-   - Extract WS brief → `.deep-plan/handoff/WS{n}-brief.md`
+3. **Pre-flight scan** — scan the roadmap the roadmap for contradictions; cross-check Dependency Graph ↔ Implementation Order before dispatch
+4. **Per-sprint dispatch loop** (dispatch unit is the Sprint, not the Workstream), one loop per sprint:
+   - Extract Sprint brief → `.deep-plan/handoff/Sprint{m}-brief.md`
    - Dispatch implementer subagent ([implementer-prompt.md](../skills/deep-plan/references/implementer-prompt.md))
-   - Generate diff → `.deep-plan/handoff/WS{n}-diff.md`
+   - Generate diff → `.deep-plan/handoff/Sprint{m}-diff.diff` (via `skills/deep-plan/script/generate-diff.sh`)
    - Dispatch reviewer subagent ([reviewer-prompt.md](../skills/deep-plan/references/reviewer-prompt.md))
    - Review loop: fix → re-review until approved
    - Update progress ledger → `.deep-plan/handoff/progress.md`
-5. **Final review** — cross-WS integration check after all WS complete
+5. **Final review** — cross-sprint integration check after all sprints complete
 
 Artifacts live under `.deep-plan/handoff/`. Progress ledger survives compaction.
 
@@ -116,7 +116,7 @@ Artifacts live under `.deep-plan/handoff/`. Progress ledger survives compaction.
 
 ## UI Projects
 
-If roadmap touches visual components, run UI review checklist after Phase 5.
+If the roadmap touches UI/frontend/mockup/component work, run the UI/UX review checklist during Phase 4 (Adversarial Review); findings join the Phase 4 amendment checkpoint.
 *Guide: [ui-review.md](../skills/deep-plan/references/ui-review.md)*
 
 ## Common Failure Modes

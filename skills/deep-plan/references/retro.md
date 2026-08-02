@@ -6,17 +6,17 @@ Closes the loop after execution-handoff finishes. Non-blocking — no user confi
 
 ## When This Runs
 
-Only after execution-handoff.md's Section 6 (Final Review) has completed for every work stream. If the user declined handoff (Section 1, option B) or execution is still in progress, this phase doesn't apply yet.
+Only after execution-handoff.md's Section 5 (Final Review) has completed for every sprint. If the user declined handoff (Section 1, option B) or execution is still in progress, this phase doesn't apply yet.
 
 ## What to Compare
 
 Pull from three sources:
 
 - The finalized roadmap (`.deep-plan/<epic-name-in-kebab-case>.md`) — Confidence Table, Tasks, Failure Modes, Security Risks
-- Every `WS{n}-report.md` — what the implementer actually did, concerns raised
-- Every `WS{n}-review.md` — what the reviewer actually found
+- Every `Sprint{m}-report.md` — what the implementer actually did, concerns raised
+- Every `Sprint{m}-review.md` — what the reviewer actually found
 
-For each work stream, check:
+For each sprint, check:
 
 ```markdown
 ### WS[n] — [Name] Retro
