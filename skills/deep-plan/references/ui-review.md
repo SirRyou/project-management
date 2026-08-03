@@ -24,6 +24,7 @@ If any of these conditions are met, the Design/UI-UX review is **mandated**.
    - Layout responsiveness and visual hierarchy
    - Accessibility, cognitive load, styling standards
    - Consistency with existing design tokens and spacing systems
+4. **CSS Coverage**: Every `className` in the JSX must map to a defined CSS rule — grep both directions. Unstyled classes (referenced in markup but defined nowhere) render as raw content and are the most common silent UI defect.
 
 ---
 

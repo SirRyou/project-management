@@ -1,201 +1,206 @@
-# <Roadmap Name>
+﻿# <Roadmap Name>
 
-## Context
-
-## Objective
-
-Describe what this phase is trying to accomplish.
-
-### Underlying Problem
-
-One sentence: what problem is actually being solved (not what was literally asked)?
-If the literal request and the underlying problem are the same, state that explicitly.
-
-## Current State
-
-- Existing capabilities
-- Known limitations
-- Technical debt/Blocker
-- Previous phase summary
-
-## Scope
-
-### In Scope
-
-- ...
-
-### Out of Scope
-
-- ...
-
-### Trust Boundaries This Phase Touches
-
-- [ ] [boundary] — which tasks cross it
+> **This is the append-order skeleton, not a strict final layout.** The roadmap is written
+> incrementally (progressive write). Each phase appends its section to `.deep-plan/<name>.md` in
+> place. A section that doesn't exist yet simply hasn't been reached. The *required-section checklist*
+> in [quality-gates.md](../references/quality-gates.md) verifies each **heading exists** by the end of
+> Phase 4 — it does NOT require the file to physically match this order in a single final pass.
+>
+> Sections below are tagged **(Phase N)** = which phase writes them. Read-only consumers (execution
+> handoff, retro) locate content by heading, not by position.
 
 ---
 
-## System Invariants
+## PROBLEM (Phase 1)
 
-Rules that must always remain true regardless of implementation. Fill in project-specific invariants — the list below is a starting point, not a prescription.
+One sentence: the underlying problem being solved, **not** the literal prompt.
+If literal ask == underlying problem, say so explicitly.
 
-- [ ] ...
-- [ ] ...
+## OBJECTIVE (Phase 1)
+
+One paragraph: what this epic accomplishes.
+
+## IN-SCOPE (Phase 1)
+
+- [ ] [item] — rationale. Each item = atomic sub-feature, the sequential unit of Phase 2 analysis.
+
+## OUT-OF-SCOPE (Phase 1)
+
+- [item] — rationale (deferred, out of bounds).
+
+## BLOCKERS (Phase 1, optional)
+
+- [item] — must resolve before execution. Omit section entirely if none.
+
+## SYSTEM INVARIANTS & TRUST BOUNDARIES (Phase 1)
+
+Rules that must always remain true regardless of implementation. Fill in project-specific ones.
+
+- [ ] [invariant / boundary] — area of concern (e.g. database transactions, auth rules)
+
+## ASSUMPTIONS (Phase 1, optional)
+
+- [assumption] — project risk if wrong. Omit section entirely if none.
+
+## Codebase Context (Phase 1)
+
+- Relevant files (paths + one-line purpose)
+- Schemas / constraints
+- Patterns new code must follow
+- Tests that could break
+- Unverified unknowns
+
+## Research Backlog (Phase 1 placeholder, Phase 2+ logs)
+
+| ID | Question | Priority | Status |
+| -- | -------- | -------- | ------ |
+| R1 | ...      | High     | Open   |
 
 ---
 
-## Architecture Decisions
+## Phase 2: Gap Analysis (Phase 2)
 
-Record decisions that affect multiple work streams.
+Enumerate gaps adversarially, **per IN-SCOPE item**. Failure Modes / Security Risks **live here** in
+2A-2D; Phase 3 Work Streams reference them by F-id / S-id rather than duplicating. Ends with the
+consolidation (E) and review gate (F).
 
-| ID  | Decision | Rationale | Affects | Status   |
-| --- | -------- | --------- | ------- | -------- |
-| D1  | ...      | ...       | T1, T2  | Accepted |
+### Problem-Fit & Status: [Item] (2A)
 
-> When a decision is superseded, mark it `Superseded by Dxx` rather than deleting it.
+- **Literal ask:** [what was requested]
+- **Underlying goal:** [what actually needs to be true]
+- **Gap:** [does the literal ask fully close it? what's missing?]
+- **Verdict:** FIT | PARTIAL_FIT (missing: ...) | MISFIT
+- **Invariant Impact:** [Preserved | Threatened]
+- **Blocker Status:** [NONE | BLOCKER - Reason]
+
+_(Repeat 2A-2D per item.)_
+
+#### Failure Modes (2B)
+
+| # | Failure Mode | Trigger | Impact | Machine Exit Verification |
+| - | ------------ | ------- | ------ | ------------------------- |
+| F1 | [..] | [..] | [..] | [command / test] |
+
+#### Security Risks (2C)
+
+| # | Risk | Trust Boundary Crossed | Adversarial Trigger | Impact | Defense Contract |
+| - | ---- | ---------------------- | ------------------- | ------ | ---------------- |
+| S1 | [..] | [..] | [..] | [..] | [..] |
+
+_(If no security surface: `No security surface — reason: [why]`.)_
+
+#### Invariant & Boundary Violation Check (2D)
+
+- [silent-violation notes] -> mark CRITICAL, require automated assertion.
+
+#### Work Stream Consolidation (2E)
+
+Cluster gaps/FMs/risks into deliverable work streams.
+
+#### Review Gate (2F)
+
+Collection of BLOCKER / MISFIT / PARTIAL_FIT items. Present and get answer before Phase 3.
+
+#### Research Addendum (2G)
+
+Resolved unknowns + industry alignment that validates (or adjusts) the design.
 
 ---
 
-## Work Streams
+## Phase 3: Roadmap (Phase 3)
 
-### WS1 — <Name>
+### Architecture Decisions
 
-#### Objective
+Decisions affecting multiple work streams.
+
+| ID | Decision | Rationale | Affects | Status |
+| -- | -------- | -------- | ------  | ------ |
+| D1 | [..] | [..] | T1, T2 | Accepted |
+
+> Superseded decision -> mark `Superseded by Dxx`, never delete.
+
+### Work Streams
+
+#### WS1 — <Name>
+
+##### Objective
 
 Why this work stream exists and what invariants it protects.
 
-#### Problem-Fit
+##### Tasks
 
-- **Literal ask:** What was requested.
-- **Underlying goal:** What actually needs to be true for the user.
-- **Gap:** Does the literal ask fully close that gap?
-- **Verdict:** FIT / PARTIAL FIT (missing: ...) / MISFIT
+| ID | Task | Depends On | Mitigates (F-/S-id) | Risk | Status |
+| -- | ---- | ---------- | ------------------- | ---- | ------ |
+| T1 | [..] | None | F1, S1 | Low | TODO  |
 
-#### Failure Modes
+> Every failure mode and security risk from 2A-2D must trace to >=1 task via Mitigates;
+> unmitigated F-/S-id = failed Phase 3 checklist.
 
-- ...
-
-#### Security Risks
-
-| #   | Risk | Trust Boundary Crossed | Adversarial Trigger | Impact |
-| --- | ---- | ---------------------- | ------------------- | ------ |
-| S1  | ...  | ...                    | ...                 | ...    |
-
-_(If no security surface: `No security surface — reason: [why]`)_
-
-#### Tasks
-
-| ID  | Task | Depends On | Risk | Status |
-| --- | ---- | ---------- | ---- | ------ |
-| T1  | ...  | None       | Low  | TODO   |
-
-#### Sad Paths
+##### Sad Paths
 
 - **T1:** What can go wrong. **Mitigation:** How it's handled.
 
-#### Exit Criteria
+##### Exit Criteria
 
-- [ ] [Machine Verification Command: `npm test` / `pytest` / `cargo test` / `git diff check`] — must pass cleanly
+- [ ] [Machine Verification Command: `npm test` / `pytest` / `git diff`] — must pass cleanly
 
----
+##### Unit Tests (per-WS, required)
 
-### WS2 — <Name>
-
-_(repeat WS1 structure)_
-
----
-
-## Cross-Cutting Work
-
-| ID  | Task | Work Stream | Depends On | Status |
-| --- | ---- | ----------- | ---------- | ------ |
-| T17 | ...  | Testing     | WS1-T1     | TODO   |
-| T22 | ...  | Refactoring | None       | TODO   |
+- [ ] Minimal unit test(s) for THIS work stream's own logic. Each WS must own its unit tests
+      locally — cross-WS / integration / e2e coverage goes in `Cross-Cutting Work`, not here.
 
 ---
 
-## Dependency Graph
+### Cross-Cutting Work (required)
+
+Tasks that bridge multiple work streams or sprints: **integration / e2e tests**, shared
+refactoring, type-safety wiring, migration glue. Owned here, not parked inside a WS.
+
+| ID | Task | Work Stream | Depends On | Status |
+| -- | ---- | ----------- | ---------- | ------ |
+| X1 | [e2e/integration harness] | WS1, WS3 | WS1-T1 | TODO  |
+
+---
+
+### Dependency Graph (Phase 3)
 
 ```text
 WS1
- ├── T1  (independent)
- ├── T2  (independent)
- ├── T3  ← T1
+ ├── T1 (independent)
+ ├── T2 <- T1
  │
  ▼
-WS2
- ├── T4  (independent)
- ├── T5  ← T3
- │
- ▼
-WS3
+WS2 ...
 
 Cross-Cutting:
-  T17-T21 (tests) — run parallel with each WS
-  T22-T25 (type safety) — independent, run anytime
+  X1 (e2e) — after WS1 + WS4
 ```
 
----
+### Implementation Order (Phase 3)
 
-## Implementation Order
+- **Sprint 1** — Tasks: ... / Expected Outcome: ...
 
-- **Sprint 1**
-  - Goals: What this sprint achieves.
-  - Tasks: T1, T2, T3
-  - Expected Outcome: System state at end of sprint.
-
-- **Sprint 2**
-  - Goals: ...
-  - Tasks: ...
-  - Expected Outcome: ...
-
----
-
-## Risks
+### Risks (Phase 3)
 
 | Risk | Likelihood | Impact | Mitigation |
 | ---- | ---------- | ------ | ---------- |
-| ...  | Low        | High   | ...        |
+| ...  | Low | High | ... |
+
+### Completion Checklist (Phase 5)
+
+### Review Log (Phase 4)
+
+| Review | Engine | Mode | Findings | Status |
+| ------ | ------ | ---- | -------- | ------ |
+| CTO / Eng / UI | ... | external | N findings, M incorporated | Cleared |
 
 ---
 
-## Research Backlog
+## Phase 4: Findings & Amendments (Phase 4)
 
-Open technical questions. When resolved, move findings into Architecture Decisions or Implementation Notes.
+Trail of CTO / Eng / UI passes + judge decisions + amendments applied as edits to the
+relevant Phase 2/3 sections.
 
-| ID  | Question | Priority | Status |
-| --- | -------- | -------- | ------ |
-| R1  | ...      | High     | Open   |
-
----
-
-## Review Log
-
-| Review            | Model | Mode                           | Findings                   | Status  |
-| ----------------- | ----- | ------------------------------ | -------------------------- | ------- |
-| Scope/Problem-Fit | ...   | external / internal            | N findings, M incorporated | Cleared |
-| Eng/Security      | ...   | external / delegate / subagent | N findings, M incorporated | Cleared |
-
----
-
-## Completion Checklist
-
-### Problem-Fit
-
-- [ ] Every PARTIAL FIT / MISFIT resolved or accepted as debt.
-
-### Resilience
-
-- [ ] All critical/high failure modes have mitigation tasks.
-
-### Security
-
-- [ ] All trust boundary crossings have corresponding S-id tasks.
-- [ ] No WS with input/auth/third-party surface has empty Security Risks.
-
-### Testing
-
-- [ ] Every task has a concrete, testable exit criterion.
-
-### User Confirmation
-
-- [ ] All adversarial review findings resolved and confirmed by user.
+- **CTO Pass:** [finding -> amendment -> decided]
+- **Eng/Security Pass:** ...
+- **Judge's Decisions & Amendments:** compiled, with why.

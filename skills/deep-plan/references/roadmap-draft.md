@@ -4,33 +4,39 @@
 
 ---
 
-## Step 3.0: Reorganize to Roadmap Template
-Before drafting workstreams, reorganize the existing Phase 1 Scope Brief and Phase 2 Gap Analysis findings into the unified structure defined in [roadmap-template.md](templates/roadmap-template.md):
-1. **Context & Invariants**: Group the problem, objective, scopes, assumptions, codebase context, and invariants at the top of the file.
-2. **Architecture Decisions**: Create a `## Architecture Decisions` table for recording cross-cutting design decisions made during planning.
-3. **Work Stream Sections**: For each deliverable workstream you group:
-   - Move the corresponding item-level Problem-Fit, Failure Modes, and Security Risks from the Phase 2 Gap Analysis section into this workstream section under `#### Problem-Fit`, `#### Failure Modes`, and `#### Security Risks`.
-   - If a workstream has no security surface, write `No security surface — reason: [why]`.
-4. **Clean up**: Remove the redundant `# Phase 2: Gap Analysis` section once its contents are distributed.
+## Step 3.0: Append Roadmap Under Its Own Heading (do NOT restructure Phase 1-2)
+
+Phase 3 **appends** a `## Phase 3: Roadmap` block to the living file under `## Phase 3: Roadmap` (H2). It does **not** rewrite or re-flow the Phase 1 Scope Brief or Phase 2 Gap Analysis — those stay where the progressive write put them. The template ([roadmap-template.md](../templates/roadmap-template.md)) is an append-order skeleton, not a final-layout contract; consumers locate sections by heading.
+
+1. **Keep Phase 1-2 untouched.** Do not move `## PROBLEM` sections, do not merge `## Codebase Context`, do not delete `## Phase 2: Gap Analysis`. Failure Modes / Security Risks remain in 2A-2D and are referenced by F-id / S-id from the WS tables below.
+2. **Architecture Decisions**: Create a `### Architecture Decisions` table under the Phase 3 heading for cross-cutting design decisions made during planning.
+3. **Work Stream Sections**: For each deliverable workstream, build `### WS{n}` sections referencing the item-level Problem-Fit / Failure Modes / Security Risks from Phase 2 by F-id / S-id — do not copy their content in.
+
+Only structural exception: if Phase 1 used a `# <Name>` title, keep it; it is the file title, not a phase section.
 
 ---
 
 ## Step 3.1: Structure Work Streams
 
-From Phase 2's gap clusters, group into **deliverable work streams** (WS). Each WS must:
+From Phase 2's gap clusters (2E), group into **deliverable work streams** (WS). Each WS must:
 - Be independently reviewable
 - Have clear completion criteria
 - Not cross too many domains/files (spike if >5 files)
 
-**Format (append to file):**
+**Format (append under `## Phase 3: Roadmap`):**
 
 ```markdown
-## Work Streams (Phase 3)
+### Work Streams
 
-### WS1: [Name]
-- **Objective:** [One sentence]
-- **Owner:** [Role/person, if known]
-- **Dependencies:** [Other WS IDs or external deps]
+#### WS1: [Name]
+##### Objective
+[One sentence — why this WS exists, what invariant it protects]
+##### Tasks
+| ID | Task | Depends On | Mitigates (F-/S-id) | Risk | Status |
+##### Sad Paths
+##### Exit Criteria
+##### Unit Tests
+[Minimal unit tests for THIS WS's own logic — required. Cross-WS/integration/e2e goes in Cross-Cutting Work.]
 ```
 
 ## Step 3.2: Break Down Tasks (Per WS)
@@ -49,36 +55,56 @@ For each WS, list tasks **in execution order.**
 **Format (append to file):**
 
 ```markdown
-### WS1 — Task Breakdown
+#### WS1 — Task Breakdown
 
-| ID  | Task | Dependencies | Verification |
-|-----|------|--------------|--------------|
-| T1.1 | [Action + file] | None | [Command to prove it works] |
-| T1.2 | [Action + file] (Mitigates S1) | T1.1 | [Test case to pass] |
+| ID  | Task | Depends On | Mitigates (F-/S-id) | Risk | Status |
+|-----|------|------------|---------------------|------|--------|
+| T1.1 | [Action + file] | None | F1 | Low | TODO |
+| T1.2 | [Action + file] | T1.1 | S1 | Med | TODO |
 
 #### WS1 — Sad Paths
 - **T1.1:** [What fails]. **Mitigation:** [How it is handled].
 - **T1.2:** [What fails]. **Mitigation:** [How it is handled].
+
+#### WS1 — Unit Tests
+- [ ] [minimal unit test(s) for THIS WS — required. No WS ships without its own unit test.]
+- [ ] [cross-WS / integration / e2e tests → NOT here, put in `## Cross-Cutting Work`]
 ```
+
+> **WS task table columns (canonical):** `ID | Task | Depends On | Mitigates (F-/S-id) | Risk | Status`.
+> `Mitigates` carries the gap-to-task traceability from Phase 2 — every F-/S-id must map to >=1 task.
 
 ## Step 3.3: Define Exit Criteria (Machine-Checkable)
 For each WS, write **exit criteria** – not "done", but provable verification.
 
 ```markdown
-### WS1 — Exit Criteria
+#### WS1 — Exit Criteria
 - [ ] All tests pass: `go test ./...`
 - [ ] Integration test for [endpoint] returns 200
 - [ ] `grep -r "old_function"` returns 0 hits
 - [ ] No new linter warnings
 ```
 
-## Step 3.4: Map Dependencies & Critical Path
-Write a simple text graph:
+## Step 3.35: Define Cross-Cutting Work (required section)
+
+After all WS are drafted, add a `### Cross-Cutting Work` section under `## Phase 3: Roadmap` for tasks
+that bridge multiple WS or sprints: **integration / e2e test suites**, shared refactoring, type-safety
+wiring, migration glue. Do **not** bury these inside a WS's task table.
 
 ```markdown
-## Dependency Map
-WS1 (auth) → WS2 (db migration) → WS3 (api handler)
-WS1 → WS4 (frontend client) (can run in parallel with WS2)
+### Cross-Cutting Work
+| ID | Task | Work Stream | Depends On | Status |
+|----|------|-------------|------------|--------|
+| X1 | [e2e harness] | WS1, WS3 | WS1-T1 | TODO  |
+```
+
+## Step 3.4: Map Dependencies & Critical Path
+Write a simple text graph (canonical heading `## Dependency Graph` — not `Dependency Map`):
+
+```markdown
+## Dependency Graph
+WS1 (auth) -> WS2 (db migration) -> WS3 (api handler)
+WS1 -> WS4 (frontend client) (can run in parallel with WS2)
 ```
 
 ## Step 3.5: Log Open Unknowns (Research Backlog)
@@ -115,11 +141,13 @@ Once the full roadmap file is written, extract **only this digest**. It is dispo
 
 - [ ] Every WS has at least 1 exit criterion
 - [ ] Every task has a dependency (or "None")
-- [ ] Every task is ≤ 2h work (or split)
+- [ ] Every task is <= 2h work (or split)
 - [ ] Every task has a Sad Path mitigation defined
-- [ ] All Phase 2 gaps (F-ids and S-ids) trace directly to tasks
+- [ ] Every WS has its own minimal unit test (no WS ships untested)
+- [ ] All Phase 2 gaps (F-ids and S-ids) trace directly to tasks via the `Mitigates` column
+- [ ] `## Cross-Cutting Work` exists and holds integration/e2e/multi-WS tasks
 - [ ] Research Backlog has priority tags
-- [ ] Full file is written, not just the digest
+- [ ] Full file is written, not just the digest (`## Phase 3: Roadmap` appended, Phase 1-2 left intact)
 
 ## Failure Modes (Anti-Patterns)
 

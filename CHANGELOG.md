@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-08-03
+
+### Changed
+
+- **Roadmap template flipped to match the new incremental-write output** (`templates/roadmap-template.md`): The template is now an append-order skeleton matching what Phases 1-4 actually produce, instead of a strict final layout. Consumers (execution handoff, retro) locate sections by heading, not position. All phase blocks demoted to `##` (no H1 breaks): Phase 1 block, `## Phase 2: Gap Analysis`, `## Phase 3: Roadmap`, `## Phase 4: Findings & Amendments`.
+- **Progressive-write contract codified** (SKILL.md): Each phase appends its own section in place; earlier phase blocks are not restructured when later phases append.
+- **Required-section quality gate** (`quality-gates.md`): Template match now checked **by heading presence**, not physical order. Same required sections apply to Quick Path output.
+- **Cross-Cutting Work restored**: Reintroduced as a required section for integration / e2e / multi-sprint tasks; each Work Stream must own its own minimal unit tests.
+- **Execution handoff: atomic decomposition + immediate escalation** (`execution-handoff.md`): Controller decomposes oversized Phase 3 tasks into atomic sub-tasks in the brief; implementers report `BLOCKED` immediately on critical/impossible work instead of grinding through a known-bad sprint.
+- **Quick Path aligned** (`quick-path.md`): Now emits the canonical H2 heading scheme instead of a divergent inline template, so downstream consumers treat it identically to Full Path output.
+
+### Changed
+- **Gap-analysis Focus Rule extended**: Failure handlers must be traced against production state transitions, not just test state — a guard written for test-only state can dead-code the real path.
+- **Test non-vacuity** enforced as a quality gate: new tests guarding failure handlers must fail against pre-fix code.
+- **UI review adds CSS coverage check**: every `className` must map to a defined CSS rule.
+- **Implementer prompt updated**: explicit scope-discipline rule against refactoring adjacent out-of-scope code; execution-handoff adds "adjacent-code refactors" anti-pattern with controller diff-check step.
+- **Reference path fixes**: quality-gates and roadmap-draft links corrected to `../templates/roadmap-template.md`.
+
 ## [2.3.1] - 2026-08-02
 
 ### Added

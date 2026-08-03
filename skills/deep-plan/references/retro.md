@@ -6,7 +6,7 @@ Closes the loop after execution-handoff finishes. Non-blocking — no user confi
 
 ## When This Runs
 
-Only after execution-handoff.md's Section 5 (Final Review) has completed for every sprint. If the user declined handoff (Section 1, option B) or execution is still in progress, this phase doesn't apply yet.
+Only after execution-handoff.md's Section 5 (Final Review) has completed for every sprint. If the user declined handoff at Phase 5 (approval given, execution not opted into) or execution is still in progress, this phase doesn't apply yet.
 
 ## What to Compare
 

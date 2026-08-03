@@ -150,10 +150,10 @@ Evidence the judge cannot confirm from its own memory of the project → Needs H
 ## 4. Amendment Compilation & Checkpoint (Single Stop)
 After the Confidence Arbitration Judge compiles the findings:
 
-Format the Judge's Decisions:
+Format the Judge's Decisions (appended inside the final `## Phase 4: Findings & Amendments` section):
 
 ```markdown
-## Judge's Decisions & Amendments
+### Judge's Decisions & Amendments
 
 ### Accepted (Confidence: High)
 - **Finding:** [finding]
@@ -192,8 +192,8 @@ If the Judge marks any finding as "Needs Human Decision" or identifies any unres
 ### How to Apply Approved Amendments to the Living File:
 Once the amendments are approved by the user:
 1. **Targeted Edits:** Use code-editing tools (e.g., `replace_file_content`) to directly modify the affected sections (Scope, Tasks, Sad Paths, Exit Criteria) in the living `.deep-plan/<epic-name-in-kebab-case>.md` file. Do NOT rewrite the entire file from scratch.
-2. **Update the Review Log:** Locate the `## Review Log` table at the bottom of the roadmap file (defined in `templates/roadmap-template.md`). Fill in the details of this review pass (model, mode, number of findings, status = "Cleared").
-3. **Audit Trail:** Append the finalized `## Judge's Decisions & Amendments` section to the end of the file, providing a permanent record of the review outcomes.
+2. **Update the Review Log:** Locate the `### Review Log` table under `## Phase 3: Roadmap` (heading-based — not "bottom of file", since Phase 4 appends after it). Fill in the details of this review pass (model, mode, number of findings, status = "Cleared").
+3. **Audit Trail:** Append the finalized `## Phase 4: Findings & Amendments` section (with Judge's Decisions & Amendments inside it) to the end of the file, providing a permanent record of the review outcomes.
 
 **Important:** Do **NOT** edit or write to the living roadmap file until the user has explicitly answered the critical questions and selected A or approved B. All intermediate findings are held in memory.
 

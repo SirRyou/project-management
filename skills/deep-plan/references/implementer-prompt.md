@@ -52,6 +52,12 @@ Subagent (general-purpose):
     6. Self-review (see below)
     7. Write report and return status
 
+    **Scope discipline:** implement exactly what the brief specifies. Do NOT refactor adjacent
+    code — helper functions, wiring, or orchestration near your changes — even if it looks
+    cleaner or broken. If you believe a change outside the brief is required or tempting, leave
+    it untouched and note it as a concern in your report instead. Out-of-scope refactors are
+    reverted by the controller and consume review cycles.
+
     Work from: [directory]
 
     While iterating, run the focused tests for what you're changing; run

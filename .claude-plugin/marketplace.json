@@ -9,7 +9,7 @@
       "name": "project-management",
       "source": ".",
       "description": "Task tracking with context recovery (tree-of-work), resilient feature planning (deep-plan), and systematic debugging (investigate)",
-      "version": "2.3.1"
+      "version": "2.4.0"
     }
   ]
 }

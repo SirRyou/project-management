@@ -40,7 +40,7 @@ If a sprint has parallel lanes (independent WS running concurrently within the s
 
 | Artifact   | Created by                | Contents                                                                                        |
 | ---------- | ------------------------- | ----------------------------------------------------------------------------------------------- |
-| **Brief**  | Controller (from roadmap) | Tasks + failure modes + security risks + exit criteria + sad paths for this sprint's task set    |
+| **Brief**  | Controller (from roadmap) | Atomic sub-tasks (decomposed from roadmap tasks) + failure modes + security risks + exit criteria + sad paths for this sprint's task set    |
 | **Diff**   | Controller (via script)   | Commit list + stat summary + full diff for the sprint                                            |
 | **Report** | Implementer               | What was done, exit criteria results, F-ids addressed, S-ids addressed, files changed, concerns |
 | **Review** | Reviewer                  | Spec verdict + quality verdict + failure modes & security table                                 |
@@ -77,15 +77,16 @@ Sequential dispatch is still the default when the graph doesn't clearly separate
 
 ### 4a. Extract Sprint Brief
 
-Controller reads the roadmap, extracts the task set for this sprint, and writes to `.deep-plan/handoff/Sprint{m}-brief.md` (or `Sprint{m}-{lane}-brief.md` for a parallel lane):
+Controller reads the roadmap, extracts the task set for this sprint, and writes to `.deep-plan/handoff/Sprint{m}-brief.md` (or `Sprint{m}-{lane}-brief.md` for a parallel lane). **Locate content by heading, not by file position** — the roadmap is phase-appended, so e.g. Architecture Decisions live under `## Phase 3: Roadmap → ### Architecture Decisions` and failure modes under `## Phase 2: Gap Analysis`. Never assume a section sits at a fixed offset.
 
-1. Identify the task IDs scheduled in this sprint (from Implementation Order) — this may be a full WS or a subset of one
-2. Copy each task's row from the WS task table(s) it belongs to — if tasks come from more than one WS, pull from each source WS section, and note the source WS per task for traceability
-3. Copy relevant Architecture Decisions (D-ids) that affect these tasks
+1. Identify the task IDs scheduled in this sprint (from the `### Implementation Order` heading) — this may be a full WS or a subset of one
+2. Copy each task's row from the `### Work Streams` task table(s) it belongs to — if tasks come from more than one WS, pull from each source WS section, and note the source WS per task for traceability
+3. Copy relevant Architecture Decisions (D-ids) from the `### Architecture Decisions` table that affect these tasks
 4. Copy each task's dependencies resolved to specific task IDs (not "depends on WS1") — the brief should never require the implementer to re-derive dependencies from the graph
 5. Note which prior sprint(s) produced the dependencies listed, so the implementer knows what already exists to build on
-6. Include failure modes, security risks, exit criteria, and sad paths for these specific tasks
-7. Write to `.deep-plan/handoff/Sprint{m}-brief.md`
+6. Include failure modes (from `## Phase 2: Gap Analysis`, referenced by F-id), security risks (S-id), exit criteria, and sad paths for these specific tasks
+7. **Decompose oversized tasks into atomic sub-tasks before writing the brief.** Phase 3 tasks are the roadmap grain, not the execution grain. If a single roadmap task fans out across files, subsystems, or concurrent concerns, split it in the brief as `T12a / T12b / T12c` with its own sad path and exit criterion per sub-task — the implementer executes the atomic set, not one monolithic task. A task that cannot be decomposed into ≤2h chunks gets flagged in the brief, not forced through whole
+8. Write to `.deep-plan/handoff/Sprint{m}-brief.md`
 
 ### 4b. Dispatch Implementer
 
@@ -110,6 +111,8 @@ The implementer:
 - **DONE_WITH_CONCERNS** → read concerns, address if correctness/scope, note if observation, proceed to review
 - **NEEDS_CONTEXT** → provide missing context, re-dispatch
 - **BLOCKED** → assess: context problem (re-dispatch), needs more capability (upgrade model), plan wrong (escalate to user)
+
+**Immediate escalation (report now, don't grind):** if during execution the implementer hits a task that is impossible as specified, a blocker that no capability upgrade fixes, or a finding that contradicts the roadmap's plan (wrong architecture, broken invariant), it must **stop and report immediately** — status `BLOCKED` with the specific reason, in the final message, without finishing the rest of the sprint. Do not let a sprint grind on while a critical defect is known. Controller routes it via [reentry-protocol.md](reentry-protocol.md) (targeted delta re-plan) instead of forcing the sprint through review with a known-bad task.
 
 ### 4c. Generate Diff
 
@@ -203,3 +206,4 @@ After all sprints complete, dispatch one final reviewer:
 - **Pasting context** — hand artifacts as files, not pasted text. Fresh subagent needs task + context, not session history.
 - **Ignoring ledger** — after compaction, trust the ledger and `git log` over recollection.
 - **Skipping brief extraction** — don't paste roadmap sections into prompts. Extract to file, pass path.
+- **Adjacent-code refactors** — implementer subagents refactoring code near (but outside) the brief's scope. Known to happen; consumes review cycles and risks regression. The controller must diff-check each sprint against the brief's file list before review and revert out-of-scope changes, not just flag them after the reviewer finds them.

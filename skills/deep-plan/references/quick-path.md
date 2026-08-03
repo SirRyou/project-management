@@ -60,7 +60,7 @@ If the Gap Analysis identifies any `CRITICAL` risk (e.g., auth, permissions, PII
 
 1. **Draft Plan**: Outline work streams with high-level tasks, dependencies, and exit criteria.
 2. **Adversarial Review**: Run a quick review pass using a different model (or a same-model subagent with a fresh context) to challenge the draft on edge cases, over-engineering, and security gaps.
-3. **Final Roadmap**: Write the final roadmap to `.deep-plan/<epic-name-in-kebab-case>.md` using the template below.
+3. **Final Roadmap**: Write the final roadmap to `.deep-plan/<epic-name-in-kebab-case>.md` using the canonical headings below — the same H2 heading scheme the Full Path uses, so downstream consumers (execution handoff, quality gates, retro) locate sections the same way whether the plan came from Quick or Full Path.
 
 **Iron Law checkpoint**: presenting the Final Roadmap is not the same as approval. Per SKILL.md's Iron Law, do not begin implementation — do not start editing code — until the user has explicitly confirmed the roadmap. Present it and stop; wait for a real reply, not just the act of writing the file.
 
@@ -68,32 +68,66 @@ If the Gap Analysis identifies any `CRITICAL` risk (e.g., auth, permissions, PII
 
 ## Final Roadmap Template
 
-write to .deep-plan/
+Write to `.deep-plan/<epic-name-in-kebab-case>.md`. Use the same headings the Full Path emits (defined canonically in [roadmap-template.md](../templates/roadmap-template.md)) — Quick Path just fills fewer of them in one pass instead of appending per phase. Every section is `##` (no `#` except the file title).
 
 ```markdown
-# Phase Roadmap: [Epic/Feature Name]
+# <Epic/Feature Name>
 
-## 1. Scope & Objective
+## PROBLEM
+[Underlying problem, not the literal ask]
 
-- **Objective**: [Goal]
-- **Underlying Problem**: [Core problem solved]
-- **In Scope**: [Items]
-- **Out of Scope**: [Items]
+## OBJECTIVE
+[What this epic accomplishes]
 
-## 2. Gap Analysis Summary
+## IN-SCOPE
+- [item] — rationale
 
-- **Problem-Fit Gaps**: [List]
-- **Key Failure Modes**: [List]
-- **Security Risks**: [List]
+## OUT-OF-SCOPE
+- [item] — rationale (deferred)
 
-## 3. Work Streams
+## BLOCKERS (optional)
+- [item] — must resolve before execution
 
-### WS1: [Name]
+## SYSTEM INVARIANTS & TRUST BOUNDARIES
+- [invariant / boundary] — where it's enforced
 
-- **Tasks**:
-  - T1: [Title] - **Steps**: [Bite-sized] - **Exit Criteria**: [Testable] - **Sad Path**: [Mitigation]
-  - T2: ...
-  - **Dependencies**: [e.g., T2 depends on T1]
+## Phase 2: Gap Analysis
+Per IN-SCOPE item, minimum viable form: Verdict (2A), Failure Modes (2B), Security Risks (2C) or `No security surface — reason: [why]`.
 
-...
+### Problem-Fit & Status: [Item]
+- **Verdict:** FIT | PARTIAL_FIT | MISFIT
+
+#### Failure Modes
+| # | Failure Mode | Trigger | Impact | Machine Exit Verification |
+
+#### Security Risks
+| # | Risk | Trust Boundary | Adversarial Trigger | Impact | Defense Contract |
+
+## Phase 3: Roadmap
+
+### Architecture Decisions
+| ID | Decision | Rationale | Affects | Status |
+
+### Work Streams
+#### WS1 — <Name>
+##### Objective
+##### Tasks
+| ID | Task | Depends On | Mitigates (F-/S-id) | Risk | Status |
+##### Sad Paths
+##### Exit Criteria
+- [ ] [machine verification command]
+##### Unit Tests (per-WS, required)
+- [ ] minimal unit test(s) for this WS's own logic
+
+### Cross-Cutting Work (required)
+| ID | Task | Work Stream | Depends On | Status |
+| X1 | [e2e/integration harness] | WS1, WS2 | WS1-T1 | TODO |
+
+### Dependency Graph
+### Implementation Order
+### Completion Checklist
 ```
+
+> Cross-section F-/S-id traceability (Phase 2 -> WS `Mitigates` column) follows the Full Path rule:
+> every failure mode and security risk must map to >=1 task. Same quality gates at
+> [quality-gates.md](../references/quality-gates.md) apply to Quick Path output.

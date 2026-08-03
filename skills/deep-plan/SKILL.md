@@ -2,8 +2,7 @@
 name: deep-plan
 description: >
   Performs structured pre-code planning for non-trivial features. Use when the user requests a plan,
-  epic, roadmap, or approach review, or when a change couples >3 files with cross-file dependencies/design
-  decisions, mutates DB schemas, touches auth/trust boundaries, or adds concurrency.
+  epic, roadmap, or approach review, or when a change couples >3 files with cross-file dependencies/design decisions, mutates DB schemas, touches auth/trust boundaries, or adds concurrency.
 ---
 
 # Deep Plan
@@ -17,7 +16,7 @@ description: >
 3. **Default:** Quick Path (see [quick-path.md](references/quick-path.md)).
 
 ## Core Execution Rules
-*   **Progressive Write:** Write each phase's output directly to the roadmap file `.deep-plan/<epic-name-in-kebab-case>.md` as you execute it. Do not wait until the end.
+*   **Progressive Write:** Write each phase's output directly to the roadmap file `.deep-plan/<epic-name-in-kebab-case>.md` as you execute it, **appending** sections under their phase heading (Phase 1 block, `## Phase 2: Gap Analysis`, `## Phase 3: Roadmap`, `## Phase 4: Findings & Amendments`). Do not wait until the end, and do not restructure earlier phase blocks when appending — consumers locate sections by heading, not position. Template: [roadmap-template.md](templates/roadmap-template.md).
 *   **Unknowns Resolution:** Handle unknowns immediately: 1) verify via web search, 2) ask the user, or 3) log as `R{n}` in the roadmap's research backlog.
 
 ---
@@ -45,7 +44,9 @@ For each phase, read its reference file **only** when starting that phase.
 
 ### Phase 5: Quality Gate & Approval
 1. Read [quality-gates.md](references/quality-gates.md).
-2. Run checklist. **Hard Stop:** Present final roadmap and ask to hand off or stop.
+2. Run checklist (required sections present by heading — see quality gates).
+3. **Hard Stop:** Present final roadmap and ask to hand off or stop. Roadmap approval and execution opt-in are two separate decisions — get explicit confirmation for each.
+4. If user opts into execution, dispatch [execution-handoff.md](references/execution-handoff.md).
 
 ### Phase 6: Post-Execution Retro
-1. If handoff was approved, read [retro.md](references/retro.md) post-completion to calibrate.
+1. Only runs if execution-handoff was opted into and its Final Review (§5) completed. Read [retro.md](references/retro.md) post-completion to calibrate.

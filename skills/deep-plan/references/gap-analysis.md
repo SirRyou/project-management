@@ -23,7 +23,7 @@ The goal is not to generate many rows. The goal is to find the one failure mode 
 Run all three lenses for each item listed under `IN-SCOPE` in the approved Phase 1 Scope Brief. **Structure the output sequentially by item**, resolving Lens 1, Lens 2, and Lens 3 inside the same item block before moving to the next item.
 
 **Progressive Write Rule (Active Here):**
-After completing the full analysis block (2A–2D) for **each item**, immediately append that block to `.deep-plan/<epic-name-in-kebab-case>.md` under `# Phase 2: Gap Analysis`. Do NOT batch all items in memory and write once.
+After completing the full analysis block (2A–2D) for **each item**, immediately append that block to `.deep-plan/<epic-name-in-kebab-case>.md` under `## Phase 2: Gap Analysis`. Do NOT batch all items in memory and write once.
 
 ### Quick-Skip Rule
 If an item clearly has no security surface (e.g., pure internal formatting logic, UI-only cosmetic changes, documentation updates), omit the 2C Table entirely and write exactly: `No security surface — reason: [why]`. Do NOT skip Lens 1 or Lens 2 — every item needs problem-fit and resilience analysis.
@@ -44,6 +44,8 @@ Spend proportional effort based on risk level:
 - **CRITICAL/HIGH items**: Full three-lens analysis with detailed tables.
 - **MEDIUM items**: Condensed analysis — focus on the most likely failure mode and top security risk.
 - **LOW items**: One-liner verdict per lens unless something unexpected surfaces.
+
+**Failure-Handler Production Trace:** When a failure mode's mitigation is a guard or handler, verify **which states reach it in production**, not just in tests. A guard written against the test's artificial state can silently dead-code the real path (e.g. a `complete()` that sets status before queueing makes a later `if (status !== 'running') return` swallow every real failure). Trace the state transitions that actually precede the handler and name the states in the failure-mode row.
 
 ---
 
