@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Audience adaptation changes visible detail only; planning rigor and evidence requirements remain consistent.
 - Worker and specialist routing now derives from task metadata and the risk register.
 
+### Documentation
+
+- Updated the Deep Plan Diátaxis documentation suite (`tutorial-deep-plan.md`, `howto-deep-plan.md`, `reference-deep-plan.md`, `explanation-deep-plan.md`) to reflect the hardened five-phase planning lifecycle, isolated worktree execution, multi-axis reviews, and ledger resume protocols.
+
 ## [3.0.0] - 2026-09-19
 
 ### Added

@@ -1,165 +1,199 @@
-# Deep Plan: Why It Works This Way
+# Deep Plan: Architectural Principles and Design Rationale
 
-Deep Plan enforces structured planning for complex features through a phased workflow with adversarial review. This document explains the design decisions behind it.
+This document explains the foundational theory, architectural design decisions, and engineering tradeoffs behind Deep Plan.
 
 **Related docs:** [Tutorial](tutorial-deep-plan.md) | [How-To Guide](howto-deep-plan.md) | [Reference](reference-deep-plan.md)
 
-## The Problem
+---
 
-AI agents plan poorly. They implement the literal request without understanding the underlying problem, miss failure modes, and skip security analysis. The result: features that work in the happy path but break under pressure.
+## The Core Problem: Why AI Agents Fail at Complex Engineering
 
-Common failure modes:
-- **Literal implementation**: Agent implements exactly what was asked, not what was needed
-- **Blind spots**: Agent misses failure modes, security risks, and edge cases
-- **Single-path design**: Agent designs for success, not for failure
-- **Scope creep**: Agent adds "nice to have" features that bloat the roadmap
+Large Language Models possess extensive knowledge of software frameworks, syntax, and design patterns. However, when tasked with non-trivial software engineering—features spanning multiple files, persistent state mutations, asynchronous boundaries, or security constraints—naive AI agents consistently fail due to well-documented cognitive failure modes:
 
-## The Approach
+1. **Optimistic Happy-Path Bias:** Agents default to implementing the simplest path that succeeds under ideal conditions. They routinely neglect network partitions, concurrency races, database rollback failures, and invalid input vectors unless forced to confront them.
+2. **Context Window Degradation:** In long chat sessions, early requirements, user constraints, and subtle invariants are gradually pushed out of active context or diluted during context compaction. The agent drifts into building what it remembers rather than what was agreed upon.
+3. **Premature Implementation:** Agents exhibit a bias toward immediate code generation. Faced with an ambiguous goal, an agent will often generate hundreds of lines of speculative code before verifying whether the codebase architecture, existing conventions, or third-party dependencies actually support the approach.
+4. **Self-Confirmation and Rubber-Stamping:** When an agent reviews its own plan or code in the same context, it almost invariably approves it. The model treats its previous reasoning as authoritative context, reinforcing its own blind spots.
+5. **Multi-File Contamination:** When multiple tasks are implemented in a shared working directory without strict boundaries, half-finished edits contaminate the workspace, making automated testing and isolated rollback impossible.
 
-Deep Plan solves this with three mechanisms:
+Deep Plan is an architectural framework designed to counteract each of these failure modes through formal separation of concerns, externalized state, and multi-axis verification gates.
 
-### 1. Problem-Fit Analysis
+---
 
-Before planning, ask: "Does the literal request fully solve the underlying problem?"
+## 1. Why Intent is Separated from Grounding
 
-Why this matters:
-- Users often describe symptoms, not root causes
-- "Add a retry button" might mean "the request times out silently"
-- Implementing the literal request can miss the point entirely
+In naive workflows, an agent receives a prompt and immediately begins searching the codebase to find where to add the code. Deep Plan strictly bifurcates this into **Phase 1 (Intent)** and **Phase 2 (Grounding)**.
 
-The Problem-Fit lens forces the agent to:
-1. State the literal ask
-2. Identify the underlying goal
-3. Check if the ask closes the gap
-4. Flag any MISFIT or PARTIAL_FIT
+```mermaid
+flowchart LR
+    Prompt["User Request"] --> Intent["00-intent.md<br/>(What must be true)"]
+    Intent --> Grounding["01-grounding.md<br/>(What already exists)"]
+    Grounding --> Gap["Delta: Architectural Requirements"]
+```
 
-### 2. Three-Lens Gap Analysis
+### The Rationale
+- **User intent is problem-oriented; codebase reality is implementation-oriented.** Users frequently describe symptoms ("add a retry button") rather than root causes ("the worker times out on large payloads"). Capturing intent in `00-intent.md` locks down the underlying business objective and candidate invariants before the agent is influenced by existing codebase structures.
+- **Preventing Solution-First Anchoring:** If an agent inspects the code before clearly articulating the problem, it anchors on the existing architecture—even if that architecture is flawed or inadequate for the new feature.
+- **Uncovering Latent Decisions Early:** By separating intent capture from codebase exploration, the agent can immediately identify high-level forks (e.g. data ownership, persistence models) and ask the user targeted questions before wasting time mapping irrelevant subsystems.
 
-For each item in scope, run three independent analyses:
+---
 
-1. **Problem-Fit**: Does this solve the right problem?
-2. **Resilience**: What fails when things go wrong?
-3. **Security**: What gets abused?
+## 2. Why Risks are Separated from Architecture
 
-Why three lenses?
-- Each catches different blind spots
-- Running them in parallel prevents tunnel vision
-- Tagging gaps (FIT, MISFIT, CRITICAL, BLOCKER) enables prioritization
+In conventional software development, risk analysis is frequently conducted as a post-hoc audit: an architect designs a system, and a security or operations engineer points out where it might break.
 
-### 3. Adversarial Review
+Deep Plan reverses this sequence. **The Risk Register (`02-risk-register.md`) must be authored in Phase 2, prior to Tier 2 architecture design in Phase 3.**
 
-After drafting the plan, run it by a different model (or same model with fresh context) using the "outside voice" principle.
+```mermaid
+flowchart TD
+    Grounding["Grounding Dossier"] --> Risks["Risk Register (02-risk-register.md)<br/>Ranked by Impact & Uncertainty"]
+    Risks --> Architecture["Tier 2 Architecture Contracts<br/>Every High Risk Traced to Mitigation"]
+```
 
-Why adversarial review?
-- Different training catches different blind spots
-- A skeptical CTO finds scope issues
-- A senior engineer finds technical risks
-- The counter-bias checklist prevents self-confirmation
+### The Rationale
+- **Risks are Architectural Constraints:** If an API faces a potential race condition or token replay attack, that is not a detail for the implementer to figure out in a pull request. It is a fundamental constraint that dictates data schemas, transaction boundaries, and interface contracts.
+- **Defeating Optimistic Bias:** Forcing the agent to document failure modes, abuse vectors, and external unknowns *before* drawing architecture diagrams ensures that resilience patterns (sliding-window fallbacks, idempotency keys, circuit breakers) are first-class architectural components rather than brittle patches added after production outages.
 
-## Trade-offs
+---
 
-### Quick Path vs Full Path
+## 3. Why Three Tiers of Planning
 
-Deep Plan offers two execution paths (<!-- ponytail: simplified to use logical complexity/uncertainty instead of fragile file-count metric -->):
+Deep Plan rejects flat task lists (e.g. standard todo lists or unstructured markdown checklists) in favor of a three-tier hierarchy:
 
-| Criteria | Quick Path (Low Overhead) | Full Path (Deep Plan) |
-|----------|-----------|-----------|
-| **Logic Sequencing** | Linear or independent steps (<=3) | Multi-stage / branching dependencies (>3) |
-| **State / Invariant Impact** | Stateless, pure additions, or isolated logic | Mutates schemas, shared state, or system invariants |
-| **Uncertainty & Risk** | Zero unknowns; high confidence | Unknowns, spikes required, or low confidence |
-| **Security Surface** | No trust-boundary crossings | New or modified trust-boundaries / auth paths |
+```mermaid
+flowchart TD
+    T1["Tier 1: Epic Overview & Invariants<br/>(Strategic: Business goals, non-negotiable system rules)"]
+    T1 --> T2["Tier 2: Module Architecture Contracts<br/>(Architectural: Interfaces, schemas, sequence flows)"]
+    T2 --> T3["Tier 3: Atomic Task Cards<br/>(Tactical: Verifiable units, exact paths, test commands)"]
+```
 
-**What we gain with Quick Path:**
-- Faster for simple changes
-- Less overhead for small features
-- 1 checkpoint instead of 3
+### The Rationale
+- **Cognitive Scope Isolation:** A worker implementer working on a single function does not need—and should not have—the full cognitive overhead of the entire epic. The worker needs only the Tier 3 task card and its immediate parent Tier 2 contract. This keeps worker context windows lean and prevents hallucinations.
+- **Invariant Traceability:** System invariants (e.g. `INV-1: Unsalted passwords are never written to disk`) are declared once in Tier 1. Tier 2 modules specify the enforcement mechanisms, and Tier 3 tasks link directly to the invariants they protect. If a worker diff threatens `INV-1`, the Adversarial Challenger immediately catches it.
+- **Contract-Ready Atomicity:** Tasks in Tier 3 are defined not by file lines, but by **independently verifiable behavioral changes**. Downstream tasks can rely on the contracts established by upstream tasks because each tier guarantees interface stability.
 
-**What we lose with Quick Path:**
-- Less thorough analysis
-- May miss edge cases
-- No adversarial review (unless auto-escalated)
+---
 
-The bet: most features are simple. Quick Path handles them without overhead.
+## 4. Why Plan Review is Separated from Code Review
 
-### Auto-Escalation
+A universal law of systems engineering is that the cost of fixing an error grows exponentially the later it is detected:
 
-If Quick Path yields `MISFIT` or `CRITICAL` items, or total scope exceeds 15 tasks, auto-escalate to Full Path.
+| Phase Detected | Cost to Remediate | Deep Plan Defense |
+| :--- | :--- | :--- |
+| **Phase 4: Plan Review** | Low (Edit Markdown plan) | **Plan Challenger** Subagent |
+| **Phase 5 / Execution** | High (Rewrite code, re-run tests) | **Code Auditor** Subagent |
+| **Post-Merge / Production** | Severe (Rollback, data fix, outage) | **Integrated-Tree Gate** |
 
-Why auto-escalate?
-- Prevents under-planning for complex features
-- Catches scope issues early
-- Ensures adversarial review for risky changes
+### The Rationale
+- **Challenging Assumptions Before Writing Code:** The **Plan Challenger** reviews the plan before any worker is dispatched. It checks for circular dependencies, unmitigated risks, ungrounded external library assumptions, and unverifiable exit criteria. Catching a circular dependency in `dependency-dag.json` takes 30 seconds; untangling it after three workers have written conflicting branches can take hours.
+- **Independent Adversarial Mandate:** The Plan Challenger operates with an explicit adversarial prompt. Its job is not to help the plan succeed, but to find reasons why it will fail. This breaks the self-confirmation bias of the planning agent.
 
-### Skip Phase 4
+---
 
-If Phase 2 yields all `FIT`, 0 `CRITICAL`, and <=5 total gaps, skip Phase 4 (adversarial review).
+## 5. Why Dual-Axis Code Auditing and Adversarial Challenging
 
-Why skip?
-- Low-risk changes don't need adversarial review
-- Saves time and tokens
-- The three-lens analysis already caught issues
+When a worker submits a commit, Deep Plan subjects it to two distinct review subagents running in parallel:
 
-### Non-Linear Flow
+```mermaid
+flowchart LR
+    Commit["Worker Commit SHA"] --> CA["Code Auditor"]
+    Commit --> AC["Adversarial Challenger"]
+    CA -->|Axis 1| Standards["Standards Review<br/>(Style, conventions, bloat)"]
+    CA -->|Axis 2| Spec["Spec Review<br/>(Acceptance criteria, file boundaries)"]
+    AC --> Invariants["Stress Test<br/>(Invariants, sad paths, race conditions)"]
+    Standards & Spec & Invariants --> Verdict{"All Axes PASS?"}
+```
 
-Deep Plan supports non-linear flow:
-- Phase 4 review finds scope issues → jump back to Phase 2
-- Phase 2 yields all FIT, 0 CRITICAL, <=5 gaps → skip Phase 4
+### The Rationale
+- **Separating Hygiene from Specification:** Human and AI reviewers often suffer from "linter distraction"—spending energy commenting on variable names and formatting while completely missing that a critical acceptance criterion was omitted. The **Code Auditor** explicitly evaluates the diff along two separate axes:
+  - **Standards Axis:** Does the code follow repository hygiene and maintainability conventions?
+  - **Spec Axis:** Did the worker satisfy the exact Tier 3 contract without adding unauthorized changes or scope creep?
+- **The Adversarial Mindset:** Unit tests written by the worker demonstrate that the code works under expected inputs. The **Adversarial Challenger** asks the opposite question: *What breaks under malformed inputs, timeouts, network latency, and concurrency?* It validates that failure defenses specified in Tier 3 are actively enforced, not bypassed.
 
-Why non-linear?
-- Planning is iterative, not linear
-- New information changes the plan
-- The skill should adapt to reality
+---
 
-## Alternatives Considered
+## 6. Why Worker Commits are Isolated and Explicitly Integrated
 
-### Single-Pass Planning
+In naive multi-agent workflows, multiple subagents edit files simultaneously in the main workspace. This causes catastrophic race conditions: subagents overwrite each other's edits, dirty working trees confuse test runners, and isolating which subagent introduced a bug is impossible.
 
-Some planners do a single pass: gather requirements, draft plan, done. Deep Plan rejects this because:
-- Single-pass misses blind spots
-- No adversarial review
-- No problem-fit analysis
+Deep Plan enforces a strict worktree isolation and integration model:
 
-### Tool-Based Planning
+```mermaid
+flowchart TD
+    Parent["Parent Branch (master)"] --> Fork["git worktree add .worktrees/T01"]
+    Fork --> Worker["Worker executes in .worktrees/T01"]
+    Worker --> Review["Reviewers audit worker commit SHA"]
+    Review -->|PASS| Merge["PM merges commit to Parent Branch"]
+    Merge --> Verify["Run full verification on Parent Branch"]
+    Verify -->|PASS| Unlock["Mark COMPLETED & unlock dependents"]
+```
 
-Some tools enforce planning formats (e.g., Jira, Linear). Deep Plan rejects this because:
-- Tools are platform-specific
-- Formats change
-- The skill should be portable
+### The Rationale
+- **Physical Boundary Isolation:** By executing each worker in an isolated git worktree (`git worktree add`), workers have an independent filesystem and index. Edits cannot leak across tasks.
+- **The "Green on Branch, Broken on Main" Fallacy:** A worker's unit tests passing in its isolated worktree proves only that the task works in isolation. When merged with earlier tasks on the parent branch, subtle integration issues (e.g. conflicting schema migrations or middleware ordering bugs) can arise.
+- **The Integration Gate:** Deep Plan requires the PM to merge the approved commit into the parent branch and re-run verification on the integrated parent tree. Dependents in the DAG are unlocked **only** after integrated verification passes.
 
-### Fixed Workflow
+---
 
-Some planners enforce a fixed workflow (Phase 1 → Phase 2 → ... → Phase 5). Deep Plan rejects this because:
-- Planning is iterative
-- New information changes the plan
-- The skill should adapt to reality
+## 7. Why Declared Verification Modes Replace Universal TDD
 
-## Design Principles
+Many software methodologies prescribe Test-Driven Development (TDD) as a mandatory, universal practice. While TDD is outstanding for pure business logic and algorithmic modules, dogmatically forcing red-green TDD onto all engineering tasks creates severe friction:
 
-1. **Solve the right problem**: Problem-Fit analysis ensures the plan addresses the underlying goal, not just the literal request.
-2. **Plan for failure**: Resilience lens catches failure modes before implementation.
-3. **Plan for abuse**: Security lens catches adversarial inputs before implementation.
-4. **Outside voice**: Adversarial review catches blind spots that same-model analysis misses.
-5. **User confirmation**: Never implement without explicit user approval after Phase 5.
+- Writing a unit test that fails before running a database migration often tests mock libraries rather than the real database engine.
+- Configuration changes (e.g. CI/CD pipelines, TypeScript configurations) are validated through schema compilation and static linters, not unit tests.
+- Documentation updates require link checkers and rendering validation, not assertion suites.
+- Performance refactors require reproducible statistical benchmarks comparing baselines to post-change throughput.
 
-## The "Outside Voice" Principle
+Deep Plan replaces universal TDD with **Declared Verification Modes**:
+- `behavioral-tdd`
+- `migration`
+- `static-config`
+- `documentation`
+- `benchmark`
+- `repository-specific`
 
-Deep Plan uses an "outside voice" for adversarial review to defeat self-confirmation bias. A model that drafted a plan is highly likely to rubber-stamp its own design. A fresh context or separate engine is much better at challenging assumptions.
+### The Rationale
+By matching the verification mode to the technical nature of the task, Deep Plan enforces maximum proof rigor without forcing agents to write vacuous or tautological tests.
 
-Rather than trying to auto-detect the environment (which is costly and fragile), Deep Plan uses a **config-first** approach: it asks the user once at the start of Phase 4 which review engines are available.
+---
 
-Available options:
-- **Subagents**: Spawn fresh-context subagents (sequentially) to review the plan under CTO and Engineering lenses. Fresh context alone defeats self-confirmation bias, even if using the same model family.
-- **External CLI**: Invokes a user-declared command-line utility (e.g. `claude`, `codex`, `qwen`, `gemini`) non-interactively via stdin redirection.
-- **None**: If no outside engine is available, the agent does not fake a same-context review. Instead, it outputs the full review prompts directly in the chat inside copyable blocks, allowing the user to easily copy-paste and run the review in their own browser/interface.
+## 8. Why Audience-Adaptive Visible Detail vs. Invariant Internal Rigor
 
-## Quality Gates
+A common tension in AI developer tooling is balancing communication for different user personas:
+- Casual or product-focused users prefer concise summaries and high-level progress.
+- Senior engineers and technical architects require low-level diffs, sequence diagrams, and precise failure models.
 
-Before finalizing the roadmap, verify:
+Some systems resolve this by dumbing down the planning process for casual users. **Deep Plan strictly rejects this.**
 
-- [ ] Every task has a machine-executable exit criterion
-- [ ] Every CRITICAL gap has a corresponding task
-- [ ] Every MISFIT has been resolved or accepted as debt
-- [ ] Every work stream is independently deliverable
-- [ ] The plan addresses the underlying problem, not just the literal request
+### The Rationale
+- **Rigor is Non-Negotiable:** Whether a user asks "build me an auth system" or specifies an RFC 6749 OAuth2 server, the security invariants, database migrations, and failure modes remain equally dangerous. Deep Plan maintains 100% identical planning rigor, risk registers, and verification gates for every user.
+- **Adaptive Presentation:** The PM orchestrator infers the user's communication depth from their prompt. It adapts only the visible explanation depth and terminology in the chat. The exhaustive technical details, contracts, and evidence trails remain fully persisted in `.deep-plan/` for auditing.
 
-If any gate fails, the plan is not ready.
+---
+
+## 9. The Ledger as Single Source of Truth and Resume Machine
+
+AI coding agents are inherently stateless across session restarts and subject to abrupt context compaction when token limits are reached. If an agent tracks progress purely in working memory, a session crash results in total amnesia: completed tasks are re-run, unmerged branches are orphaned, and invariants are forgotten.
+
+Deep Plan solves this by treating `.deep-plan/<epic-slug>/progress-ledger.md` and `dependency-dag.json` as the externalized state machine.
+
+### The Rationale
+- **Deterministic Resumption:** The ledger records the exact state of every task (`READY_TO_DISPATCH`, `IN_PROGRESS`, `IN_REVIEW`, `INTEGRATING`, `COMPLETED`), the worker worktrees, the commit hashes, and the resume checkpoint.
+- **Zero-Loss Recovery:** When a session is interrupted, the agent reads the ledger, confirms the parent branch git status, and immediately resumes the next ready task. Completed tasks are never re-run.
+
+---
+
+## 10. Tradeoffs and When NOT to Use Deep Plan
+
+Deep Plan is optimized for correctness, resilience, and multi-file cohesion. These guarantees come with intentional overhead:
+
+- **Coordination Cost:** Generating three tiers of plans, authoring risk registers, and running multi-axis reviews requires multiple model calls and file operations.
+- **Latency:** An epic planned and executed via Deep Plan takes longer to start writing code than an agent that immediately starts modifying files.
+
+### When NOT to Use Deep Plan
+Deep Plan should not be used for:
+- Single-file edits or localized bug fixes with obvious root causes.
+- Purely cosmetic styling or layout adjustments.
+- Routine text edits or standalone documentation updates.
+
+For these tasks, Deep Plan's **Phase 1 entry preflight** recognizes the simplicity of the scope and offers a direct implementation choice, ensuring that developer velocity is never sacrificed for unnecessary process.
