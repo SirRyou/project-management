@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-09-19
+
+### Added
+
+- **3-Tier Hierarchical Planning Architecture** (`skills/deep-plan/`): Replaced monolithic markdown files and awkward append-order layouts with a structured, decoupled 3-tier document hierarchy:
+  - **Tier 1 (High-Level):** Epic Overview, Problem Statement, Business Objectives, and System Invariants (`templates/tier1-epic-template.md`).
+  - **Tier 2 (Mid-Level):** Architecture Specifications, Component Boundaries, Sequence Diagrams, Interface Contracts, and Schema Migrations (`templates/tier2-module-template.md`).
+  - **Tier 3 (Low-Level):** Atomic Worker Execution Cards (`templates/tier3-task-template.md`) specifying exact `path/to/file:line` targets, sad path defenses, and non-vacuous test commands.
+  - **Execution DAG & Ledger:** Machine-readable dependency graph (`dependency-dag.json`) and progress matrix (`templates/progress-ledger-template.md`).
+- **Swarm Orchestrator & Dual-Review Fan-Out** (`references/swarm-execution.md`):
+  - Transitioned PM from code writer to orchestrator executing against `dependency-dag.json`.
+  - Dispatches isolated Worker Implementer subagents using TDD (Red $\rightarrow$ Green $\rightarrow$ Refactor).
+  - Automatically fans out two parallel reviewer subagents upon task completion: **Spec Compliance Reviewer** and **Adversarial Challenger**.
+- **Specialist Agent Catalog & Task-Type Routing Table** (`references/agent-catalog.md`):
+  - Catalog of 12 specialist subagent roles across planning, execution, verification, and post-execution.
+  - Dynamic routing matrix that auto-assembles team compositions for New Features, Refactors, Bug Fixes, Performance, Security, and Docs/Migrations.
+- **Install-Time Subagent Provisioning** (`bin/pm-skills.mjs` & `skills/deep-plan/subagents.json`):
+  - `npx @sirryou/skill-library install` now auto-provisions specialist subagents natively into host platforms upon first download:
+    - **OpenAI Codex:** Generates official `.toml` custom agent files into `~/.codex/agents/*.toml` (or `.codex/agents/` in workspace mode) with model and reasoning effort parameters.
+    - **Google Antigravity:** Generates `.json` subagent manifests into `~/.gemini/antigravity-cli/subagents/` (or `.agents/subagents/`) and workspace discovery rules.
+  - Added `--workspace` (`-w`) flag for project-local installation.
+
+### Changed
+
+- **Friction Reduction & Intake Protocol** (`references/intake-and-grounding.md`): Replaced 5 conversational pauses with a single upfront `ask_question` intake modal establishing Autonomy Mode (`Autonomous` vs `Collaborative`) and Epic nature.
+- **Codebase Grounding:** Replaced direct file reading in the PM context with an isolated, read-only **Codebase Explorer** subagent that compiles a Grounding Dossier.
+
+### Removed
+
+- Removed obsolete legacy workflow guides and diff bash scripts: `references/scope-analysis.md`, `references/gap-analysis.md`, `references/roadmap-draft.md`, `references/adversarial-review.md`, `references/execution-handoff.md`, `references/quick-path.md`, `references/quality-gates.md`, `script/generate-diff.sh`, and `templates/roadmap-template.md`.
+
 ## [2.4.0] - 2026-08-03
 
 ### Changed

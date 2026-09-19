@@ -20,24 +20,33 @@ const SKILLS_SOURCE = join(__dirname, '..', 'skills');
 const AGENTS = {
   claude: {
     name: 'Claude Code',
-    dest: join(homedir(), '.claude', 'skills'),
+    dest: (ws) => (ws ? join(process.cwd(), '.claude', 'skills') : join(homedir(), '.claude', 'skills')),
   },
   cursor: {
     name: 'Cursor',
-    dest: join(homedir(), '.cursor', 'skills'),
+    dest: (ws) => (ws ? join(process.cwd(), '.cursor', 'skills') : join(homedir(), '.cursor', 'skills')),
   },
   codex: {
     name: 'Codex',
-    dest: join(homedir(), '.codex', 'skills'),
+    dest: (ws) => (ws ? join(process.cwd(), '.codex', 'skills') : join(homedir(), '.codex', 'skills')),
+    agentsDest: (ws) => (ws ? join(process.cwd(), '.codex', 'agents') : join(homedir(), '.codex', 'agents')),
+    subagentFormat: 'codex-toml',
   },
   gemini: {
     name: 'Gemini CLI',
-    dest: join(homedir(), '.gemini', 'skills'),
+    dest: (ws) => (ws ? join(process.cwd(), '.gemini', 'skills') : join(homedir(), '.gemini', 'skills')),
+  },
+  antigravity: {
+    name: 'Antigravity',
+    dest: (ws) => (ws ? join(process.cwd(), '.agents', 'skills') : join(homedir(), '.gemini', 'antigravity-cli', 'skills')),
+    agentsDest: (ws) => (ws ? join(process.cwd(), '.agents', 'subagents') : join(homedir(), '.gemini', 'antigravity-cli', 'subagents')),
+    rulesDest: (ws) => (ws ? join(process.cwd(), '.agents', 'rules') : null),
+    subagentFormat: 'antigravity-json',
   },
 };
 
 const COMMANDS = {
-  install: 'Install skills (--agent to target specific agent)',
+  install: 'Install skills (--agent <name>, --workspace for project-local)',
   update: 'Update installed skills to latest version',
   check: 'Check if update is available',
   agents: 'List supported agents and their paths',
@@ -86,12 +95,113 @@ function copySkills(dest) {
   writeFileSync(join(dest, '.pm-skills-version'), getVersion());
 }
 
+/**
+ * Provision platform-specific subagents for runtimes like Codex and Antigravity.
+ */
+function provisionSubagents(agentKey, agentConfig, isWorkspace) {
+  if (!agentConfig.agentsDest) return [];
+
+  const targetDir = agentConfig.agentsDest(isWorkspace);
+  if (!existsSync(targetDir)) {
+    mkdirSync(targetDir, { recursive: true });
+  }
+
+  const skills = listSkills();
+  const provisioned = [];
+
+  for (const skill of skills) {
+    const manifestPath = join(SKILLS_SOURCE, skill, 'subagents.json');
+    if (!existsSync(manifestPath)) continue;
+
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      if (!Array.isArray(manifest)) continue;
+
+      for (const agent of manifest) {
+        const specFilePath = join(SKILLS_SOURCE, skill, agent.spec_file);
+        let instructions = '';
+        if (existsSync(specFilePath)) {
+          instructions = readFileSync(specFilePath, 'utf8').trim();
+        }
+
+        if (agentConfig.subagentFormat === 'codex-toml' && agent.codex) {
+          // Schema from OpenAI Codex docs:
+          // name, description, developer_instructions (required)
+          // model, model_reasoning_effort, sandbox_mode (optional)
+          const tomlParts = [
+            `name = "${agent.name}"`,
+            `description = "${agent.description.replace(/"/g, '\\"')}"`,
+            `model = "${agent.codex.model || 'gpt-5.6'}"`,
+            `model_reasoning_effort = "${agent.codex.model_reasoning_effort || 'medium'}"`,
+          ];
+
+          if (agent.codex.sandbox_mode) {
+            tomlParts.push(`sandbox_mode = "${agent.codex.sandbox_mode}"`);
+          }
+
+          // Format multi-line string safely for TOML
+          const cleanInstructions = instructions.replace(/"""/g, "'''");
+          tomlParts.push(`developer_instructions = """\n${cleanInstructions}\n"""\n`);
+
+          const tomlContent = tomlParts.join('\n');
+          const outFile = join(targetDir, `${agent.name}.toml`);
+          writeFileSync(outFile, tomlContent, 'utf8');
+          provisioned.push(`${agent.name}.toml`);
+        } else if (agentConfig.subagentFormat === 'antigravity-json' && agent.antigravity) {
+          // Schema for Antigravity custom subagents:
+          // name, description, system_prompt, model, enable_write_tools, enable_subagent_tools, enable_mcp_tools
+          const agyConfig = {
+            name: agent.name,
+            description: agent.description,
+            system_prompt: instructions,
+            model: agent.antigravity.model || 'inherit',
+            enable_write_tools: Boolean(agent.antigravity.enable_write_tools),
+            enable_subagent_tools: Boolean(agent.antigravity.enable_subagent_tools),
+            enable_mcp_tools: Boolean(agent.antigravity.enable_mcp_tools),
+          };
+
+          const outFile = join(targetDir, `${agent.name}.json`);
+          writeFileSync(outFile, JSON.stringify(agyConfig, null, 2), 'utf8');
+          provisioned.push(`${agent.name}.json`);
+        }
+      }
+
+      // If Antigravity workspace mode, also emit a workspace rule to auto-discover them
+      if (agentConfig.subagentFormat === 'antigravity-json' && agentConfig.rulesDest && isWorkspace) {
+        const rulesDir = agentConfig.rulesDest(isWorkspace);
+        if (!existsSync(rulesDir)) {
+          mkdirSync(rulesDir, { recursive: true });
+        }
+        const ruleContent = `---
+trigger: model_decision
+description: Load and register deep-plan specialist subagents when executing deep-plan workflows
+---
+
+# Deep Plan Subagent Discovery
+
+The workspace contains specialized deep-plan subagent definitions in \`.agents/subagents/\`.
+When executing deep-plan workflows (such as during Phase 3 planning or Phase 4 swarm execution),
+ensure these custom subagents are defined in your runtime session using \`define_subagent\`
+if they have not already been registered.
+`;
+        writeFileSync(join(rulesDir, 'deep-plan-subagents.md'), ruleContent, 'utf8');
+      }
+    } catch (err) {
+      console.error(`  ⚠️ Failed to parse subagents for skill ${skill}:`, err.message);
+    }
+  }
+
+  return provisioned;
+}
+
 function parseArgs(args) {
-  const result = { command: 'help', agents: [] };
+  const result = { command: 'help', agents: [], workspace: false };
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--agent' && args[i + 1]) {
       result.agents.push(args[++i]);
+    } else if (args[i] === '--workspace' || args[i] === '-w') {
+      result.workspace = true;
     } else if (!args[i].startsWith('-')) {
       result.command = args[i];
     }
@@ -101,7 +211,7 @@ function parseArgs(args) {
 }
 
 function main() {
-  const { command, agents: targetAgents } = parseArgs(process.argv.slice(2));
+  const { command, agents: targetAgents, workspace } = parseArgs(process.argv.slice(2));
 
   // Default to all agents if none specified
   const targets =
@@ -121,7 +231,7 @@ function main() {
         console.log(`  ✓ ${skill}`);
       }
 
-      console.log('\nInstalling to:');
+      console.log(`\nInstalling (${workspace ? 'Workspace Project' : 'User Global'}):`);
 
       for (const agentKey of targets) {
         const agent = AGENTS[agentKey];
@@ -130,7 +240,8 @@ function main() {
           continue;
         }
 
-        const installed = getInstalledVersion(agent.dest);
+        const dest = agent.dest(workspace);
+        const installed = getInstalledVersion(dest);
 
         if (command === 'install' && installed) {
           console.log(
@@ -140,11 +251,21 @@ function main() {
           console.log(`\n  ${agent.name}`);
         }
 
-        copySkills(agent.dest);
-        console.log(`  ✅ ${agent.dest}`);
+        copySkills(dest);
+        console.log(`  ✅ Skills: ${dest}`);
+
+        // Provision native subagents for Codex, Antigravity, etc.
+        const provisioned = provisionSubagents(agentKey, agent, workspace);
+        if (provisioned.length > 0) {
+          const agentsDir = agent.agentsDest(workspace);
+          console.log(`  🤖 Subagents (${provisioned.length}): ${agentsDir}`);
+          for (const item of provisioned) {
+            console.log(`     • ${item}`);
+          }
+        }
       }
 
-      console.log('\nRestart your agent session to load skills.\n');
+      console.log('\nRestart your agent session to load skills and subagents.\n');
       break;
     }
 
@@ -157,14 +278,15 @@ function main() {
         const agent = AGENTS[agentKey];
         if (!agent) continue;
 
-        const installed = getInstalledVersion(agent.dest);
+        const dest = agent.dest(workspace);
+        const installed = getInstalledVersion(dest);
         const status = !installed
           ? 'not installed'
           : installed === version
             ? '✅ up to date'
             : `⚠️  v${installed} → v${version} available`;
 
-        console.log(`  ${agent.name.padEnd(12)} ${status}`);
+        console.log(`  ${agent.name.padEnd(14)} ${status}`);
       }
 
       console.log('');
@@ -174,9 +296,11 @@ function main() {
     case 'agents': {
       console.log('\nSupported agents:\n');
       for (const [key, agent] of Object.entries(AGENTS)) {
-        console.log(`  ${key.padEnd(10)} ${agent.name.padEnd(14)} → ${agent.dest}`);
+        const dest = agent.dest(workspace);
+        const subagentsNote = agent.agentsDest ? ` [+ subagents → ${agent.agentsDest(workspace)}]` : '';
+        console.log(`  ${key.padEnd(12)} ${agent.name.padEnd(14)} → ${dest}${subagentsNote}`);
       }
-      console.log('\nUsage: npx @sirryou/skill-library install --agent claude\n');
+      console.log('\nUsage: npx @sirryou/skill-library install --agent codex [--workspace]\n');
       break;
     }
 
@@ -186,7 +310,7 @@ function main() {
     default: {
       console.log(`\n📦 skill-library v${getVersion()}\n`);
       console.log(
-        'Usage: npx @sirryou/skill-library <command> [--agent <name>]\n'
+        'Usage: npx @sirryou/skill-library <command> [--agent <name>] [--workspace]\n'
       );
       console.log('Commands:');
       for (const [cmd, desc] of Object.entries(COMMANDS)) {
@@ -194,11 +318,11 @@ function main() {
       }
       console.log('\nAgents:');
       for (const [key, agent] of Object.entries(AGENTS)) {
-        console.log(`  ${key.padEnd(10)} ${agent.name}`);
+        console.log(`  ${key.padEnd(12)} ${agent.name}`);
       }
-      console.log(
-        '\nIf no --agent specified, installs to all agents.\n'
-      );
+      console.log('\nFlags:');
+      console.log('  --workspace, -w   Install to current project directory instead of home directory');
+      console.log('  --agent <name>    Target specific agent (e.g. codex, antigravity, claude, cursor, gemini)\n');
       break;
     }
   }

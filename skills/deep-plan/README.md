@@ -1,105 +1,75 @@
-# Deep Plan
+# Deep Plan: Swarm Orchestration & 3-Tier Planning
 
-Planning for features spanning multiple files, work streams, or architectural decisions. Produces phased, adversarial-reviewed roadmaps.
+Structured pre-code planning and multi-agent swarm orchestration for complex features, migrations, and architectural refactoring.
 
 ## What It Does
 
-Deep Plan guides agents through a structured planning workflow that catches blind spots before implementation. It enforces three things no agent does naturally:
+Deep Plan orchestrates an engineering swarm (PM, System Architect, Task Decomposer, Worker Implementers, and Reviewers) to break down complex epics and execute them reliably:
 
-1. **Problem-fit analysis** — are you solving the right problem, or just implementing the literal request?
-2. **Resilience and security lenses** — what breaks when things fail? What gets abused?
-3. **Adversarial review** — a different model catches what you missed.
+1. **Intake & Grounding** — Captures user intent and autonomy preferences in a single upfront interaction; maps repository context and invariants using an isolated Codebase Explorer subagent.
+2. **3-Tier Hierarchical Planning** — Eliminates ambiguous task decomposition by generating a clear hierarchy:
+   - **Tier 1 (High-Level):** Scope, Business Objectives, System Invariants, NFRs.
+   - **Tier 2 (Mid-Level):** Architecture Contracts, Component Boundaries, Sequence Diagrams, Schemas.
+   - **Tier 3 (Low-Level):** Atomic Worker Cards with exact target files/lines, sad paths, and test commands.
+3. **Swarm Execution & Dual-Review** — Executes against a dependency DAG. Upon task completion by a Worker Implementer, the PM fans out **two parallel reviewer subagents** (Spec Compliance & Adversarial Challenger) to verify correctness and protect invariants before unlocking dependent tasks.
 
-## When to Use
+---
 
-- Multi-stage logic with sequential dependencies
-- Changes impacting persistent state, database schemas, or system invariants
-- Design decisions, trust-boundary updates, or security-critical paths
-- High-uncertainty features benefiting from structured gap analysis and adversarial review
+## The Swarm Roles
 
-## When NOT to Use
+| Role | Lifecycle | Responsibility | Reference |
+| :--- | :--- | :--- | :--- |
+| **PM / Orchestrator** | Persistent (Main Thread) | Manages DAG state, progress ledger, task dispatch, and user interaction. | `SKILL.md` |
+| **Codebase Explorer** | Ephemeral (Phase 2) | Maps AST, schemas, dependencies, conventions, and blast radius. | [codebase-explorer.md](references/subagents/codebase-explorer.md) |
+| **System Architect** | Ephemeral (Phase 3) | Slices Tier 1 scope into modular Tier 2 specifications and interface contracts. | [system-architect.md](references/subagents/system-architect.md) |
+| **Task Decomposer** | Ephemeral (Phase 3) | Decomposes Tier 2 modules into atomic Tier 3 tasks and `dependency-dag.json`. | [task-decomposer.md](references/subagents/task-decomposer.md) |
+| **Worker Implementer** | Ephemeral (Phase 4) | Implements one Tier 3 task following strict TDD (Red $\rightarrow$ Green $\rightarrow$ Refactor). | [worker-implementer.md](references/subagents/worker-implementer.md) |
+| **Spec Reviewer** | Ephemeral (Phase 4) | Checks diff against Tier 3 acceptance criteria and verifies zero scope creep. | [spec-reviewer.md](references/subagents/spec-reviewer.md) |
+| **Adversarial Challenger** | Ephemeral (Phase 4) | Stress-tests code for invariant breaks, silent failures, race conditions, and edge cases. | [adversarial-challenger.md](references/subagents/adversarial-challenger.md) |
 
-- Trivial changes, single-file edits, simple bug fixes. Implement directly.
+---
 
-## How It Works
+## Artifact Layout
 
-### Execution Path (<!-- ponytail: simplified to use logical complexity/uncertainty instead of fragile file-count metric -->)
+Planning produces a structured directory under `.deep-plan/<epic-slug>/`:
 
-| Criteria                     | Quick Path (Low Overhead)                    | Full Path (Deep Plan)                               |
-| ---------------------------- | -------------------------------------------- | --------------------------------------------------- |
-| **Logic Sequencing**         | Linear or independent steps (<=3)            | Multi-stage / branching dependencies (>3)           |
-| **State / Invariant Impact** | Stateless, pure additions, or isolated logic | Mutates schemas, shared state, or system invariants |
-| **Uncertainty & Risk**       | Zero unknowns; high confidence               | Unknowns, spikes required, or low confidence        |
-| **Security Surface**         | No trust-boundary crossings                  | New or modified trust-boundaries / auth paths       |
-
-Quick Path: 3-step workflow, 1 checkpoint.
-Full Path: 5 phases, 3 checkpoints.
-
-Auto-escalate from Quick to Full if Phase 2 yields `MISFIT` or `CRITICAL` items, or total scope exceeds 15 tasks.
-
-### Phases (Full Path)
-
-1. **Understand Scope** — read tracking docs, extract requirements, lock scope with user
-2. **Enumerate Gaps** — analyze under three lenses (Problem-Fit, Resilience, Security) in parallel. Tag gaps: `FIT`, `MISFIT`, `CRITICAL`, `BLOCKER`.
-3. **Draft Roadmap** — work streams, tasks, dependencies, exit criteria
-4. **Adversarial Review** — "outside voice" using different model provider (CTO + Eng passes)
-5. **Finalize Roadmap** — quality gates, user confirmation required before any implementation
-
-### Non-linear flow
-
-- Phase 4 review finds scope issues → jump back to Phase 2
-- Phase 2 yields all FIT, 0 CRITICAL, <=5 gaps → skip Phase 4
-
-## Core Principles
-
-1. Solve the underlying problem, not the literal request
-2. Preserve system invariants
-3. Identify failure modes early
-4. Protect trust boundaries
-5. Keep work packages independently deliverable
-
-## Architecture
-
-```
-deep-plan/
-├── SKILL.md                    # Behavioral spec (the skill)
-├── README.md                   # This file
-├── references/
-│   ├── scope-analysis.md       # Phase 1 guide
-│   ├── gap-analysis.md         # Phase 2 guide + 3-lens framework
-│   ├── roadmap-draft.md        # Phase 3 template
-│   ├── adversarial-review.md   # Phase 4 review protocol
-│   ├── quality-gates.md        # Phase 5 verification
-│   ├── execution-handoff.md    # Post-plan handoff to implementation
-│   ├── implementer-prompt.md   # WS-scoped implementer subagent prompt
-│   ├── reviewer-prompt.md      # WS-scoped reviewer subagent prompt
-│   ├── ui-review.md            # Conditional UI/UX review
-│   ├── quick-path.md           # 3-step workflow for simple epics
-│   └── resilience-first-development.md  # Engineering standards reference
-│       └── resilience-development-book/ # 18 standard sub-files
-└── templates/
-    └── roadmap-template.md     # Final roadmap format
+```text
+.deep-plan/<epic-slug>/
+├── 00-tier1-epic.md              # Tier 1: Scope, Invariants, NFRs
+├── 01-architecture-overview.md   # Tier 2: System Topology & Cross-Cutting Architecture
+├── modules/                      # Tier 2: Module/Component Specifications
+│   ├── M01-[name].md
+│   └── M02-[name].md
+├── tasks/                        # Tier 3: Atomic Worker Execution Cards
+│   ├── T01-[name].md
+│   ├── T02-[name].md
+│   └── T03-[name].md
+├── dependency-dag.json           # Machine-readable task execution graph
+└── progress-ledger.md            # Swarm execution status, commits, and review verdicts
 ```
 
-## Runtime Requirements
+---
 
-| Capability | Required | Purpose                                                    |
-| ---------- | -------- | ---------------------------------------------------------- |
-| file-read  | Yes      | Read source files, tracking docs                           |
-| file-write | Yes      | Write plan files                                           |
-| question   | Yes      | Checkpoint confirmations (3 in Full Path, 1 in Quick Path) |
-| subagent   | No       | Adversarial review with different model                    |
-| web-search | No       | External pattern research                                  |
+## The 4 Phases
 
-Graceful degradation: if a capability is missing, the skill adapts (prose checkpoints, same-model review, skip external search).
+1. **Phase 1: User Intake** — Runs single `ask_question` call to establish Autonomy Mode (`Autonomous` vs `Collaborative`) and Epic nature.
+2. **Phase 2: Codebase Grounding** — Dispatches Codebase Explorer to compile the Grounding Dossier and resolve unknowns.
+3. **Phase 3: Tiered Planning** — Generates Tier 1, dispatches System Architect for Tier 2 modules, and dispatches Task Decomposer for Tier 3 atomic tasks and `dependency-dag.json`.
+4. **Phase 4: Swarm Execution** — Iterates over the DAG:
+   - Dispatches Worker Implementers for ready tasks.
+   - Fans out dual reviews in parallel (**Spec Compliance** + **Adversarial Challenger**).
+   - Updates `progress-ledger.md` and unlocks dependent tasks.
+   - Runs global test suite upon completion.
+
+---
 
 ## Triggers
 
 - "plan this feature"
+- "deep plan"
 - "design an epic"
 - "architectural planning"
 - "break down this work"
-- "create a roadmap"
 
 ## License
 

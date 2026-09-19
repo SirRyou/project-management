@@ -1,0 +1,188 @@
+[
+  {
+    "name": "codebase-explorer",
+    "description": "Maps AST, schemas, dependencies, and blast radius. Read-only codebase discovery.",
+    "spec_file": "references/subagents/codebase-explorer.md",
+    "codex": {
+      "model": "gpt-5.6-terra",
+      "model_reasoning_effort": "medium",
+      "sandbox_mode": "read-only"
+    },
+    "antigravity": {
+      "model": "flash",
+      "enable_write_tools": false,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "system-architect",
+    "description": "Synthesizes Tier 1 into Tier 2 module specs, interface contracts, and sequence flows.",
+    "spec_file": "references/subagents/system-architect.md",
+    "codex": {
+      "model": "gpt-5.6-sol",
+      "model_reasoning_effort": "high"
+    },
+    "antigravity": {
+      "model": "pro",
+      "enable_write_tools": true,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "task-decomposer",
+    "description": "Slices Tier 2 modules into atomic Tier 3 tasks and generates dependency-dag.json.",
+    "spec_file": "references/subagents/task-decomposer.md",
+    "codex": {
+      "model": "gpt-5.6-sol",
+      "model_reasoning_effort": "high"
+    },
+    "antigravity": {
+      "model": "pro",
+      "enable_write_tools": true,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "worker-implementer",
+    "description": "Executes single Tier 3 task following strict Test-Driven Development (TDD).",
+    "spec_file": "references/subagents/worker-implementer.md",
+    "codex": {
+      "model": "gpt-5.6-luna",
+      "model_reasoning_effort": "low"
+    },
+    "antigravity": {
+      "model": "pro",
+      "enable_write_tools": true,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "spec-reviewer",
+    "description": "Verifies diff against acceptance criteria and file boundaries without scope creep.",
+    "spec_file": "references/subagents/spec-reviewer.md",
+    "codex": {
+      "model": "gpt-5.6-terra",
+      "model_reasoning_effort": "medium",
+      "sandbox_mode": "read-only"
+    },
+    "antigravity": {
+      "model": "flash",
+      "enable_write_tools": false,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "adversarial-challenger",
+    "description": "Stress-tests implementation for silent invariant failures, bugs, and edge cases.",
+    "spec_file": "references/subagents/adversarial-challenger.md",
+    "codex": {
+      "model": "gpt-5.6-luna",
+      "model_reasoning_effort": "high",
+      "sandbox_mode": "read-only"
+    },
+    "antigravity": {
+      "model": "pro",
+      "enable_write_tools": false,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "security-architect",
+    "description": "Designs auth flows, trust boundaries, threat models, and permission schemas.",
+    "spec_file": "references/subagents/security-architect.md",
+    "codex": {
+      "model": "gpt-5.6-sol",
+      "model_reasoning_effort": "high"
+    },
+    "antigravity": {
+      "model": "pro",
+      "enable_write_tools": true,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "security-auditor",
+    "description": "Reviews code diffs for injection vectors, auth bypass, secret leakage, and OWASP Top 10.",
+    "spec_file": "references/subagents/security-auditor.md",
+    "codex": {
+      "model": "gpt-5.6-terra",
+      "model_reasoning_effort": "high",
+      "sandbox_mode": "read-only"
+    },
+    "antigravity": {
+      "model": "pro",
+      "enable_write_tools": false,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "performance-engineer",
+    "description": "Specialized implementer for caching, query optimization, and concurrency primitives.",
+    "spec_file": "references/subagents/performance-engineer.md",
+    "codex": {
+      "model": "gpt-5.6-terra",
+      "model_reasoning_effort": "medium"
+    },
+    "antigravity": {
+      "model": "pro",
+      "enable_write_tools": true,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "performance-benchmarker",
+    "description": "Validates performance tasks against latency, throughput, and resource budgets.",
+    "spec_file": "references/subagents/performance-benchmarker.md",
+    "codex": {
+      "model": "gpt-5.6-terra",
+      "model_reasoning_effort": "medium",
+      "sandbox_mode": "read-only"
+    },
+    "antigravity": {
+      "model": "flash",
+      "enable_write_tools": false,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "researcher",
+    "description": "Investigates external APIs, library quirks, and unknowns to unblock tasks.",
+    "spec_file": "references/subagents/researcher.md",
+    "codex": {
+      "model": "gpt-5.6-terra",
+      "model_reasoning_effort": "medium",
+      "sandbox_mode": "read-only"
+    },
+    "antigravity": {
+      "model": "flash",
+      "enable_write_tools": false,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    }
+  },
+  {
+    "name": "documentation-writer",
+    "description": "Generates API docs, migration guides, and changelog entries post-execution.",
+    "spec_file": "references/subagents/documentation-writer.md",
+    "codex": {
+      "model": "gpt-5.6-terra",
+      "model_reasoning_effort": "low"
+    },
+    "antigravity": {
+      "model": "flash",
+      "enable_write_tools": true,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": false
+    }
+  }
+]

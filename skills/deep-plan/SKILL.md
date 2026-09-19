@@ -1,52 +1,108 @@
 ---
 name: deep-plan
 description: >
-  Performs structured pre-code planning for non-trivial features. Use when the user requests a plan,
-  epic, roadmap, or approach review, or when a change couples >3 files with cross-file dependencies/design decisions, mutates DB schemas, touches auth/trust boundaries, or adds concurrency.
+  Use when planning and executing complex features, multi-file refactors, database schema migrations,
+  or architectural changes requiring structured decomposition and multi-agent coordination.
 ---
 
 # Deep Plan
 
-## Iron Law
-**Never begin implementation without explicit user confirmation of the finalized roadmap.**
-
-## Entry Decision
-1. **Decline** if change is trivial (docs, typos, comments). Suggest coding directly.
-2. **Full Path triggers** (any one): DB schema mutation, new auth/permission boundary, concurrent flow, multi-file coupling (>3 files) with cross-file dependencies/design decisions, or high rollback risk.
-3. **Default:** Quick Path (see [quick-path.md](references/quick-path.md)).
-
-## Core Execution Rules
-*   **Progressive Write:** Write each phase's output directly to the roadmap file `.deep-plan/<epic-name-in-kebab-case>.md` as you execute it, **appending** sections under their phase heading (Phase 1 block, `## Phase 2: Gap Analysis`, `## Phase 3: Roadmap`, `## Phase 4: Findings & Amendments`). Do not wait until the end, and do not restructure earlier phase blocks when appending — consumers locate sections by heading, not position. Template: [roadmap-template.md](templates/roadmap-template.md).
-*   **Unknowns Resolution:** Handle unknowns immediately: 1) verify via web search, 2) ask the user, or 3) log as `R{n}` in the roadmap's research backlog.
+## Overview
+Deep Plan orchestrates multi-agent software engineering swarms to plan and execute non-trivial code changes. It replaces monolithic planning docs and rigid conversational stops with a **3-tier document hierarchy** (Tier 1 Scope $\rightarrow$ Tier 2 Architecture Contracts $\rightarrow$ Tier 3 Atomic Task Cards) and an **Orchestrator-Worker-Reviewer swarm loop**.
 
 ---
 
-## Full Path Phases
-For each phase, read its reference file **only** when starting that phase.
+## When to Use
+- Changes spanning multiple modules or with complex dependency sequencing (>3 files).
+- Database schema migrations, state mutations, or persistent invariant changes.
+- Auth boundaries, permission updates, or security-sensitive workflows.
+- High-uncertainty features requiring codebase grounding and adversarial stress-testing.
 
-### Phase 1: Scope Analysis
-1. Read [scope-analysis.md](references/scope-analysis.md).
-2. Synthesize the Scope Brief and codebase context.
-3. **Hard Stop:** Wait for user confirmation of the brief before writing the file.
+## When NOT to Use
+- Single-file edits, trivial bug fixes, documentation, or styling tweaks. Implement directly.
 
-### Phase 2: Gap Analysis (Adversarial)
-1. Read [gap-analysis.md](references/gap-analysis.md).
-2. Run gap check. **Hard Stop:** If any blockers or mismatches are found, present them and pause.
+---
 
-### Phase 3: Draft Roadmap
-1. Read [roadmap-draft.md](references/roadmap-draft.md).
-2. Break down tasks. Flag if >8 streams or >30 tasks.
+## The Swarm Architecture
 
-### Phase 4: Adversarial Review
-1. Skip Phase 4 only if Phase 2 yielded all `FIT` (no MISFIT/PARTIAL_FIT), 0 `CRITICAL`, and <=5 total gaps.
-2. Read [adversarial-review.md](references/adversarial-review.md) to stress-test the draft.
-3. If UI/frontend work is present, also read and execute [ui-review.md](references/ui-review.md), appending its findings to the Phase 4 checkpoint.
+The Main Agent operates as the **PM / Orchestrator**. It does not write production code in the main context; it **dynamically assembles a team** of specialist subagents based on the epic type determined during Phase 1 intake.
 
-### Phase 5: Quality Gate & Approval
-1. Read [quality-gates.md](references/quality-gates.md).
-2. Run checklist (required sections present by heading — see quality gates).
-3. **Hard Stop:** Present final roadmap and ask to hand off or stop. Roadmap approval and execution opt-in are two separate decisions — get explicit confirmation for each.
-4. If user opts into execution, dispatch [execution-handoff.md](references/execution-handoff.md).
+### Core Agents (Always Active)
 
-### Phase 6: Post-Execution Retro
-1. Only runs if execution-handoff was opted into and its Final Review (§5) completed. Read [retro.md](references/retro.md) post-completion to calibrate.
+| Role | Responsibility | Reference |
+| :--- | :--- | :--- |
+| **PM / Orchestrator** | Coordinates DAG, manages state ledger, communicates with user | Main Thread |
+| **Codebase Explorer** | Maps AST, schemas, dependencies, and blast radius | [codebase-explorer.md](references/subagents/codebase-explorer.md) |
+| **System Architect** | Synthesizes Tier 1 into Tier 2 module specs and contracts | [system-architect.md](references/subagents/system-architect.md) |
+| **Task Decomposer** | Slices Tier 2 modules into atomic Tier 3 tasks and DAG | [task-decomposer.md](references/subagents/task-decomposer.md) |
+| **Worker Implementer** | Executes single Tier 3 task following TDD | [worker-implementer.md](references/subagents/worker-implementer.md) |
+| **Spec Reviewer** | Verifies diff against acceptance criteria and file boundaries | [spec-reviewer.md](references/subagents/spec-reviewer.md) |
+| **Adversarial Challenger** | Stress-tests implementation for silent invariant failures/bugs | [adversarial-challenger.md](references/subagents/adversarial-challenger.md) |
+
+### Specialist Agents (Conditionally Activated)
+
+| Role | Activated When | Reference |
+| :--- | :--- | :--- |
+| **Security Architect** | Epic touches auth, PII, trust boundaries | [security-architect.md](references/subagents/security-architect.md) |
+| **Security Auditor** | Fan-out reviewer for security-tagged tasks | [security-auditor.md](references/subagents/security-auditor.md) |
+| **Performance Engineer** | Specialized worker for perf-critical tasks | [performance-engineer.md](references/subagents/performance-engineer.md) |
+| **Performance Benchmarker** | Fan-out reviewer validating NFR budgets | [performance-benchmarker.md](references/subagents/performance-benchmarker.md) |
+| **Researcher** | Unresolved unknowns (`R{n}`) block a task | [researcher.md](references/subagents/researcher.md) |
+| **Documentation Writer** | Epic adds public APIs or breaking changes | [documentation-writer.md](references/subagents/documentation-writer.md) |
+
+**Full catalog & task-type routing rules:** [agent-catalog.md](references/agent-catalog.md)
+
+---
+
+## The 4-Phase Lifecycle
+
+```mermaid
+flowchart TD
+    Start(["Start /deep-plan"]) --> P1["Phase 1: User Intake (Single ask_question)"]
+    P1 --> P2["Phase 2: Codebase Grounding (Explorer Subagent)"]
+    P2 --> P3["Phase 3: Tiered Planning (Tier 1 -> Tier 2 -> Tier 3 + DAG)"]
+    P3 --> P4["Phase 4: Swarm Execution (Workers + Fan-Out Dual Review)"]
+    P4 --> Done(["Epic Completed & Verified"])
+```
+
+### Phase 1: User Intake (Single Interaction)
+- **Protocol:** Read [intake-and-grounding.md](references/intake-and-grounding.md).
+- **Intake Tool:** Trigger `ask_question` once upfront to determine:
+  1. **Autonomy Mode:** `Autonomous` (PM decides implementation patterns, minimizes stops) vs. `Collaborative` (consults user on major forks).
+  2. **Epic Nature:** New Feature, Refactor, Bug Fix, or Performance/Concurrency.
+
+### Phase 2: Codebase Grounding & Context Mapping
+- Dispatch **Codebase Explorer Subagent** to survey the repository without bloating the PM context.
+- Explorer extracts schemas, coding conventions, test patterns, and blast radius.
+- Produces the **Grounding Dossier**. Resolves critical unknowns via tool documentation or marks them as a research spike.
+
+### Phase 3: Tiered Planning (Zero Ambiguity)
+- **Protocol:** Read [tiered-planning.md](references/tiered-planning.md).
+- Generates the 3-tier document structure under `.deep-plan/<epic-slug>/`:
+  1. **Tier 1 (High-Level):** `00-tier1-epic.md` — Business problem, objective, invariants, and scope boundaries. Template: [tier1-epic-template.md](templates/tier1-epic-template.md).
+  2. **Tier 2 (Mid-Level):** `modules/M{n}-<name>.md` — Dispatches **System Architect** to specify interface contracts, sequence flows, and schemas. Template: [tier2-module-template.md](templates/tier2-module-template.md).
+  3. **Tier 3 (Low-Level):** `tasks/T{n}-<name>.md` — Dispatches **Task Decomposer** to create atomic execution cards. Each card specifies target files, line ranges, sad paths, and non-vacuous test commands. Template: [tier3-task-template.md](templates/tier3-task-template.md).
+  4. **Execution DAG:** Outputs `dependency-dag.json` and initializes `progress-ledger.md` (Template: [progress-ledger-template.md](templates/progress-ledger-template.md)).
+- If in *Collaborative Mode*, present Tier 1 summary for confirmation. In *Autonomous Mode*, transition immediately to Phase 4.
+
+### Phase 4: Swarm Execution & Dual-Review Fan-Out
+- **Protocol:** Read [swarm-execution.md](references/swarm-execution.md).
+- **Dispatch Loop:**
+  1. PM identifies unblocked tasks in `dependency-dag.json`.
+  2. Dispatches **Worker Implementer** for each ready task (can parallelize independent tasks).
+  3. Worker follows TDD (test first $\rightarrow$ verify fail $\rightarrow$ implement $\rightarrow$ verify pass $\rightarrow$ commit).
+- **Dual-Review Fan-Out:** On task completion, PM immediately invokes **two subagents in parallel**:
+  - **Spec Compliance Reviewer:** Verifies 100% contract adherence and zero scope creep.
+  - **Adversarial Challenger:** Stress-tests invariants, concurrency, and sad paths.
+- **Ledger Update:**
+  - Both pass $\rightarrow$ Mark task `COMPLETED` in `progress-ledger.md` and unlock downstream DAG tasks.
+  - Either fails $\rightarrow$ Dispatch remediation brief to worker $\rightarrow$ re-review.
+- When all tasks complete, run global test suite and output final report.
+
+---
+
+## Anti-Patterns to Avoid
+- **Context Pollution:** Never implement code in the PM/Orchestrator context. Always dispatch workers.
+- **Ambiguous Grain:** Never leave tasks as vague bullet points. Every Tier 3 task must be a self-contained card with target files, line targets, and test commands.
+- **Unverified Tests (Vacuous Tests):** Never accept tests that pass before code is written. Tests must fail against pre-fix code.
+- **Hard Gate Fatigue:** Never pause execution for routine partial fits or minor design choices when in Autonomous mode.

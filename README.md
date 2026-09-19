@@ -12,11 +12,28 @@ A collection of agent skills for task tracking, focus enforcement, debugging, an
 
 ## Installation
 
-### npx (Recommended)
+### CLI Installer (Recommended)
+
+Use `npx @sirryou/skill-library install` for automated installation and subagent provisioning:
 
 ```bash
-# Use `npx skills add` for cross-agent support:
+# Install to all supported agent runtimes
+npx @sirryou/skill-library install
 
+# Install for OpenAI Codex (automatically provisions skills to ~/.codex/skills and subagents to ~/.codex/agents/*.toml)
+npx @sirryou/skill-library install --agent codex
+
+# Install for Antigravity (provisions skills and subagents to ~/.gemini/antigravity-cli/)
+npx @sirryou/skill-library install --agent antigravity
+
+# Install project-locally in current repository workspace (.codex/ or .agents/)
+npx @sirryou/skill-library install --agent codex --workspace
+npx @sirryou/skill-library install --agent antigravity --workspace
+```
+
+### Cross-Agent Skills CLI
+
+```bash
 npx skills add SirRyou/project-management --skill tree-of-work
 npx skills add SirRyou/project-management --skill deep-plan
 npx skills add SirRyou/project-management --skill investigate
