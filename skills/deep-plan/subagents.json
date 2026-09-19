@@ -64,8 +64,30 @@
     }
   },
   {
+    "name": "plan-challenger",
+    "description": "Challenges the draft plan for scope gaps, architectural risks, dependency errors, and unverifiable acceptance criteria.",
+    "spec_file": "references/subagents/plan-challenger.md",
+    "codex": {
+      "model": "gpt-5.6-terra",
+      "model_reasoning_effort": "high",
+      "sandbox_mode": "read-only"
+    },
+    "antigravity": {
+      "model": "flash",
+      "enable_write_tools": false,
+      "enable_subagent_tools": false,
+      "enable_mcp_tools": true
+    },
+    "invocation_contract": "plan-challenge",
+    "delegation": {
+      "can_spawn_children": false,
+      "max_child_depth": 0,
+      "parent_managed": true
+    }
+  },
+  {
     "name": "worker-implementer",
-    "description": "Executes single Tier 3 task following strict Test-Driven Development (TDD).",
+    "description": "Executes a single ready Tier 3 task using its declared verification mode.",
     "spec_file": "references/subagents/worker-implementer.md",
     "codex": {
       "model": "gpt-5.6-luna",
@@ -99,7 +121,7 @@
       "enable_subagent_tools": false,
       "enable_mcp_tools": true
     },
-    "invocation_contract": "spec-compliance-review",
+    "invocation_contract": "code-audit",
     "delegation": {
       "can_spawn_children": false,
       "max_child_depth": 0,
@@ -187,8 +209,8 @@
     },
     "invocation_contract": "performance-implementation",
     "delegation": {
-      "can_spawn_children": true,
-      "max_child_depth": 1,
+      "can_spawn_children": false,
+      "max_child_depth": 0,
       "parent_managed": true
     }
   },

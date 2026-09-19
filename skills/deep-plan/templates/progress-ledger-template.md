@@ -1,35 +1,69 @@
 # Swarm Execution Ledger
 
-> **Single Source of Truth for Execution Progress**
-> Maintained by the PM / Orchestrator. Tracks task states, worker assignments, commit SHAs, and dual-review verdicts.
-
----
+> Single source of truth for execution progress. Maintained by the PM / Orchestrator.
 
 ## 1. Task Execution State Matrix
 
-| Task ID | Module | Prereqs | Assigned Worker | Implementation Commit | Spec Review | Challenger Review | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **T01** | M01 | None | Worker-A | `abc1234` | ✅ PASSED | ✅ PASSED | **COMPLETED** |
-| **T02** | M01 | T01 | Worker-B | `def5678` | ✅ PASSED | ⚠️ FIX_NEEDED | **IN_REMEDIATION** |
-| **T03** | M02 | T01 | — | — | — | — | **READY_TO_DISPATCH** |
-| **T04** | M02 | T02, T03 | — | — | — | — | **BLOCKED** |
+| Task ID | Module | Dependencies | Worker Worktree | Worker Commit | Integrated Commit | Verification | Code Auditor | Challenger | Status | Remediation Count |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **T01** | M01 | None | `worktrees/T01` | `abc1234` | `abc1234` | `PASS` | `PASS` | `PASS` | **COMPLETED** | 0 |
+| **T02** | M01 | T01 | `worktrees/T02` | `def5678` | — | `PASS` | `PASS` | `FAIL` | **IN_REMEDIATION** | 1 |
+| **T03** | M02 | T01 | — | — | — | — | — | — | **READY_TO_DISPATCH** | 0 |
 
-*Statuses: `BLOCKED` | `READY_TO_DISPATCH` | `IN_PROGRESS` | `IN_REVIEW` | `IN_REMEDIATION` | `COMPLETED`*
+Allowed statuses:
 
----
+```text
+READY_TO_DISPATCH
+IN_PROGRESS
+IN_REVIEW
+IN_REMEDIATION
+INTEGRATING
+VERIFIED
+COMPLETED
+BLOCKED
+FAILED
+CANCELLED
+```
 
-## 2. Dual-Review Verdict Log
+## 2. State Transition Rules
+
+```text
+READY_TO_DISPATCH -> IN_PROGRESS -> IN_REVIEW -> INTEGRATING -> VERIFIED -> COMPLETED
+IN_REVIEW -> IN_REMEDIATION -> IN_REVIEW
+IN_PROGRESS -> BLOCKED | FAILED
+IN_REVIEW -> BLOCKED | FAILED
+```
+
+Unlock dependents only after the integrated commit, integrated-tree verification, and ledger update are recorded. Record the actor, timestamp, evidence path, and reason for every non-routine transition.
+
+## 3. Review and Integration Evidence
 
 ### Task T01
-- **Worker:** Junior/Mid Dev (Worker-A)
-- **Commit:** `abc1234`
-- **Spec Compliance Verdict:** `PASS`
-  - Notes: All 3 acceptance criteria met. Only target files modified.
-- **Challenger Verdict:** `PASS`
-  - Notes: Concurrency test passed; invariants preserved.
 
----
+- **Worker:** `[role and worktree]`
+- **Worker Commit:** `abc1234`
+- **Integrated Commit:** `abc1234`
+- **Verification Mode:** `[mode]`
+- **Verification Evidence:** `[commands and outputs]`
+- **Code Auditor Standards Verdict:** `PASS`
+- **Code Auditor Spec Verdict:** `PASS`
+- **Adversarial Challenger Verdict:** `PASS`
+- **Specialist Verdicts:** `[security/performance/documentation or N/A]`
+- **Invariant Impact:** `[preserved or changed with reference]`
 
-## 3. Active Blockers & Remediation Items
-*(Omit or leave empty if none)*
-- **T02 Remediation:** Challenger identified unhandled promise rejection on DB timeout. Fix dispatched to Worker-B.
+## 4. Active Blockers and Remediation Items
+
+- **Task:** `[T{n}]`
+- **Reason:** `[concrete blocker]`
+- **Remediation Count:** `[number]`
+- **Limit:** `[configured number]`
+- **Escalation:** `[user decision, planning revision, or new session]`
+
+## 5. Resume Checkpoint
+
+- **Last completed transition:** `[task/state]`
+- **Parent branch:** `[branch]`
+- **Integrated commits:** `[list]`
+- **Next ready tasks:** `[list]`
+- **Pending user decisions:** `[list]`
+- **Handoff summary:** `[path]`

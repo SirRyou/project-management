@@ -10,9 +10,10 @@ Every invocation should include:
 2. Epic and task identifiers.
 3. Authoritative artifact paths.
 4. Explicit task objective.
-5. Scope and permission boundaries.
-6. Required verification commands.
-7. Required output contract.
+5. Relevant intent, grounding, and risk evidence.
+6. Worktree, branch, integration target, and permission boundaries.
+7. Verification mode and required commands.
+8. Required output contract.
 
 Example:
 
@@ -39,7 +40,8 @@ Return the output contract defined by your role specification.
 | `tier2-module-design` | System Architect | Tier 2 module contract |
 | `tier3-task-decomposition` | Task Decomposer | Tier 3 cards and dependency DAG |
 | `worker-task-execution` | Worker Implementer | Commit, tests, and execution summary |
-| `spec-compliance-review` | Spec Reviewer | PASS/FAIL verdict and remediation |
+| `plan-challenge` | Plan Challenger | Plan PASS/REVISE/USER_DECISION_REQUIRED verdict |
+| `code-audit` | Code Auditor | Separate Standards and Spec PASS/FAIL verdicts |
 | `adversarial-challenge` | Adversarial Challenger | Invariant and edge-case findings |
 | Specialist contracts | Specialist agents | Role-specific evidence and output |
 

@@ -31,6 +31,10 @@ npx @sirryou/skill-library install --agent codex --workspace
 npx @sirryou/skill-library install --agent antigravity --workspace
 ```
 
+For Deep Plan on Codex, inspect the effective `[agents]` configuration before
+using nested delegation. The agent-facing guidance is in
+[the Codex multi-agent reference](skills/deep-plan/references/codex-multi-agent.md).
+
 ### Native vendor subagent setup
 
 ```bash

@@ -1,58 +1,51 @@
 # Tier 3: Atomic Task Specification — T{n}: [Task Name]
 
-> **Worker Execution Contract**
-> Dispatched directly to a Worker Implementer Subagent. 
-> Self-contained: requires no outside context beyond this spec and the parent Tier 2 contract.
-
----
+> Dispatched to one worker in an isolated worktree. Define one independently verifiable behavioral or contract change.
 
 ## 1. Task Metadata
+
 - **Task ID:** T{n}
 - **Parent Module:** `modules/M{m}-[name].md`
-- **Estimated Complexity:** [Low (Junior) | Mid (Mid-level dev)]
-- **Prerequisite Tasks (Dependencies):** [e.g. `T01`, or `None`]
-- **Target File(s):**
-  - Primary: `path/to/file.ts` (Target Line: ~`120-160`)
-  - Test: `tests/path/to/test.test.ts`
+- **Intent Trace:** `00-intent.md#[section]`
+- **Invariant Trace:** `[INV-x]`
+- **Risk Trace:** `02-risk-register.md#[risk-id]` or `N/A`
+- **Kind:** `research` | `implementation` | `migration` | `documentation` | `benchmark` | `configuration`
+- **Verification Mode:** `behavioral-tdd` | `migration` | `static-config` | `documentation` | `benchmark` | `repository-specific`
+- **Prerequisite Tasks:** `[T01]` or `None`
+- **Target Files and Symbols:** `[explicit paths and functions, schemas, or sections]`
+- **Completion Criterion:** `[one observable result]`
 
----
+## 2. Dependency and Output Contract
 
-## 2. Implementation Directive (Step-by-Step)
-1. **Pre-flight verification:** Confirm prerequisite files exist and current tests pass.
-2. **Step 1:** In `path/to/file.ts`, implement function `[FunctionName](args: Type): ReturnType`.
-3. **Step 2:** Integrate invariant check `[INV-x]`: verify [condition] before mutating state.
-4. **Step 3:** Wire error handling for sad paths as specified below.
+- **Required Artifacts or Contracts:** `[what must already exist and be integrated]`
+- **Expected Outputs:** `[commit, generated files, migration, docs, measurement, or report]`
+- **Downstream Consumers:** `[tasks or modules that consume this result]`
 
----
+## 3. Implementation Directive
 
-## 3. Sad Paths & Failure Defenses
-*What can fail at runtime, and how the implementation must defend against it:*
+1. Confirm prerequisite artifacts and repository state.
+2. Follow the ordered steps below without assuming unfinished work will supply missing behavior.
+3. Preserve linked invariants and document any necessary assumption.
+
+- **Step 1:** `[path/symbol and action]`
+- **Step 2:** `[path/symbol and action]`
+- **Step 3:** `[integration or output action]`
+
+## 4. Sad Paths and Failure Defenses
 
 | Failure / Abuse Vector | Detection Point | Defense / Fallback Action |
 | :--- | :--- | :--- |
-| [e.g. Null/Undefined input] | Entry guard in `FunctionName` | Throw structured `ValidationError`, do not execute |
-| [e.g. Concurrency collision] | DB transaction / atomic write | Catch lock exception and trigger exponential retry |
+| `[failure]` | `[detection]` | `[defense]` |
 
----
+## 5. Acceptance and Verification
 
-## 4. Acceptance Criteria & Test Commands (Machine-Verifiable)
-
-### TDD Non-Vacuity Verification
-*Every new test guarding this feature must FAIL before code is written, proving it tests real behavior.*
-
-1. **Write Test First:** Create / update test in `tests/path/to/test.test.ts`.
-2. **Red Phase (Must Fail):** Run command:
-   ```bash
-   [exact test command e.g. npm test tests/path/to/test.test.ts]
-   ```
-   *Expected result: Fails due to missing implementation.*
-3. **Green Phase (Must Pass):** Implement code and re-run:
-   ```bash
-   [exact test command e.g. npm test tests/path/to/test.test.ts]
-   ```
-   *Expected result: Passes with 0 errors.*
-4. **Regression & Quality Gate:**
-   ```bash
-   [exact lint/typecheck command e.g. npm run lint && npm run typecheck]
-   ```
-   *Expected result: Clean exit code 0.*
+- **Acceptance Criteria:**
+  1. `[criterion]`
+  2. `[criterion]`
+- **Verification Command(s):**
+  ```bash
+  [exact command]
+  ```
+- **Expected Evidence:** `[exit code, output, artifact, measurement, or review result]`
+- **Non-Vacuity or Applicability Note:** `[why this verifies behavior, or why another mode applies]`
+- **Quality Checks:** `[lint/typecheck/format/docs checks, or N/A with reason]`

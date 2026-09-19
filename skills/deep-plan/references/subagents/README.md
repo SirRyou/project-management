@@ -11,11 +11,11 @@ These files are static role definitions. They are not the per-task dispatch mess
 - `../invocation-contracts.md`: parent-owned user-prompt shape for each dispatch type.
 - `../swarm-execution.md`: orchestration, ordering, retries, and review gates.
 
-The PM must inject task-specific context only as the user prompt when invoking an agent. It must not rewrite or append to the installed system prompt.
+The PM must inject task-specific context only as the user prompt when invoking an agent. It must not rewrite or append to the installed system prompt. Keep task paths, acceptance criteria, reviewer findings, and worktree details in the dynamic invocation prompt.
 
 ## Nested delegation
 
-Nested delegation is role-scoped. Planning and research roles may receive one child level; workers and reviewers remain non-nesting by default so the PM retains ownership of the DAG and review gates. The `delegation` object in `subagents.json` is the portable policy; each runtime adapter maps it to native controls.
+Nested delegation is role-scoped. Approved planning and research roles may receive one child level; workers, Code Auditors, and Adversarial Challengers remain non-nesting so the PM retains ownership of the DAG and review gates. The `delegation` object in `subagents.json` is the portable policy; each runtime adapter maps it to native controls.
 
 ## Vendor mapping
 

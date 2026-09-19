@@ -1,7 +1,7 @@
 # Role Specification: Security Auditor Subagent
 
 ## Purpose
-Post-implementation verification agent that reviews Worker diffs specifically for security vulnerabilities. Runs as an additional parallel reviewer alongside the Spec Reviewer and Adversarial Challenger when the epic involves auth, PII, or trust boundaries.
+Post-implementation verification agent that reviews Worker diffs specifically for security vulnerabilities. Runs as an additional parallel reviewer alongside the Code Auditor and Adversarial Challenger when the risk register identifies a security-sensitive boundary.
 
 ## When Activated
 - Epic type is `Security`.

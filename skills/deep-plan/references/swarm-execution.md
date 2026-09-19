@@ -1,97 +1,96 @@
-# Reference: Swarm Execution & Dual-Review (Phase 4)
+# Reference: Swarm Execution and Integration
 
-## Overview
-Phase 4 handles the dispatch and automated verification of Tier 3 tasks. The PM / Orchestrator coordinates worker implementers and reviewers against the `dependency-dag.json`.
+Execute only after the five planning phases pass their gates.
 
----
-
-## 1. The Orchestrator Execution Loop
+## Execution Loop
 
 ```mermaid
 flowchart TD
-    DAG["Read dependency-dag.json & progress-ledger.md"] --> FindReady{"Any tasks with all deps COMPLETED?"}
-    
-    FindReady -->|"Yes (T{n})"| Dispatch["Dispatch Worker Subagent\n(passes T{n} spec + parent M{m} contract)"]
-    FindReady -->|"No, and active tasks running"| Wait["Wait for task completion"]
-    FindReady -->|"No, and all tasks COMPLETED"| Complete["Phase 4 Complete: Epic Done"]
-
-    Dispatch --> WorkerExec["Worker implements via TDD\n(Reports commit SHA & test logs)"]
-    WorkerExec --> FanOut{"Fan-out Dual-Review"}
-
-    FanOut -->|"Parallel Pass 1"| Spec["Spec Compliance Reviewer"]
-    FanOut -->|"Parallel Pass 2"| Challenger["Adversarial Challenger"]
-
-    Spec & Challenger --> Evaluate{"Both Reviewers PASS?"}
-
-    Evaluate -->|"Yes"| MarkDone["Mark T{n} COMPLETED in ledger\nUnlock dependent tasks in DAG"]
-    MarkDone --> DAG
-
-    Evaluate -->|"No (Remediation needed)"| Remediate["Dispatch Remediation to Worker\nwith reviewer findings"]
-    Remediate --> WorkerExec
+    Read["Read DAG and ledger"] --> Validate["Validate dependencies and repository state"]
+    Validate --> Ready{"Ready tasks?"}
+    Ready -->|"Yes"| Isolate["Create task worktree"]
+    Isolate --> Worker["Dispatch worker with task contract"]
+    Worker --> Review["Code Auditor + Challenger + risk reviewers"]
+    Review --> Verdict{"All required reviews pass?"}
+    Verdict -->|"No"| Remediate["Bounded remediation"]
+    Remediate --> Worker
+    Verdict -->|"Yes"| Integrate["Integrate approved commit"]
+    Integrate --> Verify["Verify integrated tree"]
+    Verify --> Complete["Record COMPLETED and unlock dependents"]
+    Complete --> Read
+    Ready -->|"No, active tasks exist"| Wait["Wait for evidence"]
+    Ready -->|"No, blocked or invalid"| Block["Record BLOCKED and escalate"]
+    Ready -->|"No, all completed"| Final["Run final repository verification"]
 ```
 
----
+## Task Selection and Dependencies
 
-## 2. Step 4.1: Task Selection & Concurrency
-1. The PM inspects `dependency-dag.json` and `progress-ledger.md`.
-2. Any task whose dependencies are all marked `COMPLETED` has status `READY_TO_DISPATCH`.
-3. **Independent Parallel Dispatch:** If multiple tasks are `READY_TO_DISPATCH` and do not share target files, the PM can dispatch them concurrently to separate Worker Implementer subagents.
+1. Read `dependency-dag.json` and `progress-ledger.md`.
+2. Validate task IDs, dependency IDs, cycles, current branch, and repository cleanliness for the selected worktree.
+3. Mark a task `READY_TO_DISPATCH` only when every artifact and contract dependency is `COMPLETED` and integrated.
+4. Never assume unfinished work will provide a future contract.
+5. Parallelize only when dependencies are complete, target ownership is disjoint, and integration risk is explicitly acceptable. Serialize otherwise.
 
----
+## Worker Isolation and Dispatch
 
-## 3. Step 4.2: Worker Dispatch
-The PM invokes a Worker Implementer subagent (`references/subagents/worker-implementer.md`) with:
-- Task Spec: `.deep-plan/<epic>/tasks/T{n}-[name].md`
-- Module Spec: `.deep-plan/<epic>/modules/M{m}-[name].md`
-- Working directory / git branch.
+Create a per-task worktree or branch. Pass the worker:
 
-The PM constructs the dynamic user prompt using the `worker-task-execution` contract in [invocation-contracts.md](invocation-contracts.md). The installed subagent definition supplies only the stable system prompt and vendor runtime configuration. It must not be mutated for an individual task.
+- Tier 3 task path.
+- Parent Tier 2 module path.
+- Intent, grounding, and relevant risk paths.
+- Parent branch and integration target.
+- Verification mode and exact commands.
+- Scope and permission boundaries.
 
-The Worker:
-1. Writes test first (verifies it fails).
-2. Writes code to pass test.
-3. Commits changes cleanly (`feat(M{m}): implement T{n}`).
-4. Returns status, commit SHA, and test output.
+The worker returns a commit SHA, modified paths, verification evidence, and observations. Keep task-specific context in the dynamic user prompt; do not mutate the installed role definition.
 
----
+## Verification Modes
 
-## 4. Step 4.3: Fan-Out Dual-Review on Task Completion
-Immediately upon receiving the Worker's completion report, the PM invokes **two subagents in parallel**:
+Apply the task-declared mode:
 
-### Reviewer 1: Spec Compliance Reviewer
-- Spec: `references/subagents/spec-reviewer.md`
-- Evaluates: Did the worker implement all requested criteria? Did the worker touch any out-of-scope files?
+- `behavioral-tdd`: write a meaningful failing test, implement, pass, and run quality checks.
+- `migration`: verify pre/post schema behavior, rollback or compatibility requirements, and migration-specific tests.
+- `static-config`: validate syntax, schema, generated output, and repository checks.
+- `documentation`: follow repository documentation conventions and validate links, examples, formatting, or documentation tests.
+- `benchmark`: capture a reproducible baseline and post-change measurement against the declared budget.
+- `repository-specific`: follow the documented command and expected evidence.
 
-### Reviewer 2: Adversarial Challenger
-- Spec: `references/subagents/adversarial-challenger.md`
-- Evaluates: Are system invariants preserved? Are edge cases and sad paths properly handled? Did the worker introduce security risks or silent failures?
+## Review Composition
 
----
+For code changes, require Code Auditor and Adversarial Challenger. The Code Auditor runs two separate parallel axes: Standards and Spec. Add Security Auditor, Performance Benchmarker, or Documentation review when the risk-and-task matrix activates them.
 
-## 5. Step 4.4: Verdict Handling & Remediation Loop
-- **If both review passes return PASS:**
-  - PM updates `progress-ledger.md` marking task as `COMPLETED`.
-  - Records commit SHA and review notes in the ledger.
-  - Re-evaluates DAG to unlock newly unblocked tasks.
-- **If either review pass returns FAIL:**
-  - PM extracts the specific findings and actionable remediation from the failing verdict.
-  - Dispatches a remediation task back to the Worker (or a dedicated Fix subagent).
-  - Once fixed, re-runs the dual review. Never mark a task `COMPLETED` with an unaddressed critical finding.
+Review the exact worker commit and record findings against paths and symbols. A PASS is not completion; it authorizes integration only when all required review axes pass.
 
----
+## Remediation and Integration
 
-## 6. Step 4.5: Final Epic Verification
-When all tasks in `dependency-dag.json` are marked `COMPLETED`:
-1. Run full test suite across the repository (`npm test`, `pytest`, `cargo test`).
-2. Verify all system invariants from `00-tier1-epic.md` are green.
-3. Output final completion summary to user.
+1. If a required review fails, record the finding and increment the remediation count.
+2. Dispatch a focused remediation task in the same isolated worktree or a new one.
+3. Stop after the configured remediation limit and mark the task `BLOCKED` or `FAILED` with escalation evidence.
+4. After all required reviews pass, integrate the approved commit into the parent branch through the explicit merge or cherry-pick seam.
+5. Run affected verification on the integrated tree.
+6. Record the integrated commit, verification, reviewer verdicts, invariant impact, and ledger transition before unlocking dependents.
 
-## 7. Nested Delegation Policy
+## Ledger State Machine
 
-Nested subagents are runtime capability, not default orchestration behavior. The PM owns the Deep Plan DAG and review gates.
+Use these transitions:
 
-- Core workers and reviewers must not spawn nested agents by default.
-- A role may be marked nesting-capable through `delegation.can_spawn_children` and `delegation.max_child_depth`.
-- Claude maps this to the `Agent` tool; Antigravity maps it to `enable_subagent_tools`; Codex relies on the session-level `[agents]` configuration and the role instructions.
-- Nested work must be represented in the parent task evidence and cannot mark a DAG task complete independently.
-- `parent_managed: true` means the child may assist, but the parent still owns task completion, review, and ledger updates.
+```text
+READY_TO_DISPATCH -> IN_PROGRESS -> IN_REVIEW -> INTEGRATING -> VERIFIED -> COMPLETED
+IN_REVIEW -> IN_REMEDIATION -> IN_REVIEW
+IN_PROGRESS -> BLOCKED | FAILED
+IN_REVIEW -> BLOCKED | FAILED
+```
+
+Use `CANCELLED` when the user stops the epic. Detect and record deadlocks, invalid DAGs, unavailable required capabilities, and quota exhaustion rather than treating them as completion.
+
+## Resume Protocol
+
+When a session ends, quota is exhausted, or a handoff occurs, resume from the intent, grounding, risk, tiered plan, DAG, ledger, worker commit records, and handoff summary. Validate the current repository and integrated branch before dispatching new work.
+
+## Final Epic Verification
+
+When all tasks are `COMPLETED`, run only repository-derived applicable checks. Verify Tier 1 invariants, NFRs, documentation requirements, and the integrated branch. Report unavailable tooling separately from failed verification.
+
+## Nested Delegation
+
+Nested delegation is capability, not default orchestration. Keep workers, Code Auditors, and Adversarial Challengers non-nesting. Permit child delegation only for approved planning or research roles, at the configured maximum depth. Record all nested work in the parent task evidence; a child cannot complete a DAG task independently.

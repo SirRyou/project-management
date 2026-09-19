@@ -1,64 +1,54 @@
-# Reference: Intake & Grounding (Phases 1 & 2)
+# Reference: Intent, Grounding, Gaps, and Risks
 
-## Phase 1: Upfront User Intake (Single Interaction)
+Use this reference for the first two planning phases. Keep the writing imperative and runtime-neutral.
 
-Modern agent harnesses provide built-in interactive tools (e.g. `ask_question`). Rather than halting the agent loop multiple times across phases, the PM executes **one structured intake call** at the very beginning of the planning lifecycle.
+## Phase 1: Intent and Entry Preflight
 
-### Intake Questions Schema
-Trigger `ask_question` with the following parameters:
+Infer the user's communication depth from the request. Do not ask the user to classify themselves as technical or casual. Keep the planning rigor constant and adapt only the visible explanation depth, terminology, and implementation detail.
 
-```json
-{
-  "questions": [
-    {
-      "question": "How should the agent team handle technical implementation decisions?",
-      "options": [
-        "(Recommended) Fully Autonomous: PM & Architects choose best-practice patterns; escalate only irreversible risks (e.g. data loss, external budget, major breaking API change).",
-        "Collaborative Architect: Consult me on major architectural forks, technology choices, and trade-offs before proceeding."
-      ],
-      "is_multi_select": false
-    },
-    {
-      "question": "What is the primary objective and nature of this epic?",
-      "options": [
-        "New Feature (Additive architecture, new endpoints/schemas)",
-        "Refactoring / Modernization (Behavior-preserving, strict invariant and test parity)",
-        "Bug Fix / Stabilization (Root-cause remediation and edge-case hardening)",
-        "Performance / Concurrency (Throughput, caching, race condition elimination)",
-        "Security (Auth flows, trust boundaries, permission models, secret management)",
-        "Docs / Migration (API documentation, migration guides, changelog)"
-      ],
-      "is_multi_select": false
-    }
-  ]
-}
-```
+Capture these intent fields:
 
-### Autonomy Mode Setting
-- **Autonomous Mode:** PM and specialists resolve gaps, design contracts, and decompose tasks autonomously. No intermediate chat stops unless an irreversible risk or missing credential is encountered.
-- **Collaborative Mode:** PM presents the Tier 1 Epic overview and Tier 2 architecture summary for explicit confirmation before task execution begins.
+- Goal and problem statement.
+- Desired behaviors and outputs.
+- Candidate invariants and acceptance conditions.
+- Scope constraints and repository constraints.
+- Provisional complexity and uncertainty.
+- Autonomy mode: Autonomous or Collaborative.
+- Task type when it cannot be inferred reliably.
+- Unresolved decisions and assumptions.
 
-### Agent Team Assembly
-After intake, the PM consults the **Task-Type Routing Table** in [agent-catalog.md](agent-catalog.md) to determine which specialist agents to activate for this epic. For example:
-- A **Security** epic activates the Security Architect (planning) and Security Auditor (fan-out reviewer).
-- A **Performance** epic swaps the Worker Implementer for the Performance Engineer and adds the Performance Benchmarker to the fan-out.
-- A **Bug Fix** epic activates the Researcher to investigate root causes before decomposition.
+Persist the result as `.deep-plan/<epic-slug>/00-intent.md`. Mark inferred invariants and assumptions explicitly. Ask a question only when choosing incorrectly would materially change the plan.
 
----
+## Question Tool Contract
 
-## Phase 2: Codebase Grounding & Context Mapping
+Use the runtime's structured question tool when available. Keep questions one at a time for material decisions. Present concrete options, a recommended choice, and the tradeoffs. Do not assume a vendor-specific tool name or schema in this skill.
 
-Once intake is locked, the PM dispatches the **Codebase Explorer Subagent** (`references/subagents/codebase-explorer.md`) to establish ground truth without loading hundreds of source files into the PM's context.
+Pause even in Autonomous mode for a boundary-changing architecture fork: module boundaries, data ownership, public contracts, external providers, security trust boundaries, or irreversible migration strategy.
 
-### Explorer Dispatch Protocol
-1. Invoke subagent with role `Codebase Explorer`.
-2. Provide:
-   - Epic goal and requirements.
-   - Target directories or suspected subsystems.
-3. Require the subagent to use graph exploration (`codegraph`, `graphify`), AST search, and symbol grep.
-4. Explorer returns the **Grounding Dossier** (stack, conventions, blast radius, schemas, knowns vs unknowns).
+In Collaborative mode, require explicit approval after the complete plan. In Autonomous mode, proceed after plan validation unless a boundary-changing fork requires synchronization.
 
-### Unknowns Resolution Rule
-If the Grounding Dossier identifies unknown external library contracts or API limits:
-1. Attempt immediate resolution via documentation query (e.g., `Context7` or web search).
-2. If unresolvable in the current environment, record it as a dedicated **Spike / Research Task (T00)** in the Tier 3 task list to be resolved before dependent implementation tasks run.
+## Phase 2: Repository Grounding and Context Mapping
+
+Use repository-provided mapping tools first. If the repository has no suitable tool, dispatch the Codebase Explorer with:
+
+- Epic goal and requirements.
+- Target directories or suspected subsystems.
+- A requirement to return file-and-line evidence for every important conclusion.
+- A requirement to record search coverage and unresolved areas.
+
+Persist the result as `.deep-plan/<epic-slug>/01-grounding.md`. Include:
+
+1. Architectural stack and frameworks.
+2. Relevant file map and blast radius.
+3. Established codebase conventions and verification commands.
+4. Dependency and contract map.
+5. Known facts versus unverified unknowns.
+6. Tooling coverage and remaining gaps.
+
+Create `.deep-plan/<epic-slug>/02-risk-register.md` after grounding and before architecture design. Rank risks by impact and uncertainty. Require Tier 2 architecture to trace each material risk to mitigation, acceptance, or explicit deferral.
+
+Finalize complexity after grounding. Derive it from dependency breadth, uncertainty, change risk, verification cost, and coordination cost. Use the summary level only as a routing aid; retain the evidence behind it.
+
+## Unknown Resolution
+
+Resolve external library or API unknowns through the repository's approved documentation workflow. If an unknown remains material, create a research task in the DAG with a stable research identifier, explicit evidence output, and dependencies for blocked implementation tasks. Do not let workers guess at unresolved external behavior.

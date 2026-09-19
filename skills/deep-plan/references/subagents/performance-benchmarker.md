@@ -1,7 +1,7 @@
 # Role Specification: Performance Benchmarker Subagent
 
 ## Purpose
-Post-implementation verification agent that validates performance tasks meet the latency, throughput, and resource budgets defined in the Tier 1 NFRs. Runs as an additional parallel reviewer alongside the Spec Reviewer and Adversarial Challenger for performance-tagged tasks.
+Post-implementation verification agent that validates performance tasks meet the latency, throughput, and resource budgets defined in the Tier 1 NFRs. Runs as an additional parallel reviewer alongside the Code Auditor and Adversarial Challenger for performance-tagged tasks.
 
 ## When Activated
 - Epic type is `Performance / Concurrency`.

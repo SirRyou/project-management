@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added a five-phase Deep Plan lifecycle with persisted intent, grounding, and risk evidence.
+- Added the Plan Challenger role and plan-review gate before implementation.
+- Added task-declared verification modes, explicit dependency readiness, isolated worker integration, resume checkpoints, and bounded remediation states.
+- Added the Code Auditor contract with separate Standards and Spec review axes.
+- Added agent-facing Codex multi-agent configuration guidance.
+
+### Changed
+
+- Deep Plan now requires integrated-tree verification before unlocking dependent tasks.
+- Audience adaptation changes visible detail only; planning rigor and evidence requirements remain consistent.
+- Worker and specialist routing now derives from task metadata and the risk register.
+
 ## [3.0.0] - 2026-09-19
 
 ### Added
