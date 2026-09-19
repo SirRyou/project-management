@@ -45,6 +45,8 @@ The PM invokes a Worker Implementer subagent (`references/subagents/worker-imple
 - Module Spec: `.deep-plan/<epic>/modules/M{m}-[name].md`
 - Working directory / git branch.
 
+The PM constructs the dynamic user prompt using the `worker-task-execution` contract in [invocation-contracts.md](invocation-contracts.md). The installed subagent definition supplies only the stable system prompt and vendor runtime configuration. It must not be mutated for an individual task.
+
 The Worker:
 1. Writes test first (verifies it fails).
 2. Writes code to pass test.
@@ -83,3 +85,13 @@ When all tasks in `dependency-dag.json` are marked `COMPLETED`:
 1. Run full test suite across the repository (`npm test`, `pytest`, `cargo test`).
 2. Verify all system invariants from `00-tier1-epic.md` are green.
 3. Output final completion summary to user.
+
+## 7. Nested Delegation Policy
+
+Nested subagents are runtime capability, not default orchestration behavior. The PM owns the Deep Plan DAG and review gates.
+
+- Core workers and reviewers must not spawn nested agents by default.
+- A role may be marked nesting-capable through `delegation.can_spawn_children` and `delegation.max_child_depth`.
+- Claude maps this to the `Agent` tool; Antigravity maps it to `enable_subagent_tools`; Codex relies on the session-level `[agents]` configuration and the role instructions.
+- Nested work must be represented in the parent task evidence and cannot mark a DAG task complete independently.
+- `parent_managed: true` means the child may assist, but the parent still owns task completion, review, and ledger updates.

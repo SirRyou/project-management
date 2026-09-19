@@ -31,6 +31,16 @@ npx @sirryou/skill-library install --agent codex --workspace
 npx @sirryou/skill-library install --agent antigravity --workspace
 ```
 
+### Native vendor subagent setup
+
+```bash
+npx @sirryou/skill-library install --claude
+npx @sirryou/skill-library install --codex
+npx @sirryou/skill-library install --agy
+```
+
+The external `npx skills add` CLI supports `--skill` and `--agent`, but it does not execute this package native subagent provisioning. Use the package installer after `npx skills add` when custom subagents are required.
+
 ### Cross-Agent Skills CLI
 
 ```bash

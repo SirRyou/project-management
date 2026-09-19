@@ -11,8 +11,14 @@
     "antigravity": {
       "model": "flash",
       "enable_write_tools": false,
-      "enable_subagent_tools": false,
+      "enable_subagent_tools": true,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "exploration-dossier",
+    "delegation": {
+      "can_spawn_children": true,
+      "max_child_depth": 1,
+      "parent_managed": true
     }
   },
   {
@@ -26,8 +32,14 @@
     "antigravity": {
       "model": "pro",
       "enable_write_tools": true,
-      "enable_subagent_tools": false,
+      "enable_subagent_tools": true,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "tier2-module-design",
+    "delegation": {
+      "can_spawn_children": true,
+      "max_child_depth": 1,
+      "parent_managed": true
     }
   },
   {
@@ -41,8 +53,14 @@
     "antigravity": {
       "model": "pro",
       "enable_write_tools": true,
-      "enable_subagent_tools": false,
+      "enable_subagent_tools": true,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "tier3-task-decomposition",
+    "delegation": {
+      "can_spawn_children": true,
+      "max_child_depth": 1,
+      "parent_managed": true
     }
   },
   {
@@ -58,6 +76,12 @@
       "enable_write_tools": true,
       "enable_subagent_tools": false,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "worker-task-execution",
+    "delegation": {
+      "can_spawn_children": false,
+      "max_child_depth": 0,
+      "parent_managed": true
     }
   },
   {
@@ -74,6 +98,12 @@
       "enable_write_tools": false,
       "enable_subagent_tools": false,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "spec-compliance-review",
+    "delegation": {
+      "can_spawn_children": false,
+      "max_child_depth": 0,
+      "parent_managed": true
     }
   },
   {
@@ -90,6 +120,12 @@
       "enable_write_tools": false,
       "enable_subagent_tools": false,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "adversarial-challenge",
+    "delegation": {
+      "can_spawn_children": false,
+      "max_child_depth": 0,
+      "parent_managed": true
     }
   },
   {
@@ -103,8 +139,14 @@
     "antigravity": {
       "model": "pro",
       "enable_write_tools": true,
-      "enable_subagent_tools": false,
+      "enable_subagent_tools": true,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "security-design",
+    "delegation": {
+      "can_spawn_children": true,
+      "max_child_depth": 1,
+      "parent_managed": true
     }
   },
   {
@@ -121,6 +163,12 @@
       "enable_write_tools": false,
       "enable_subagent_tools": false,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "security-review",
+    "delegation": {
+      "can_spawn_children": false,
+      "max_child_depth": 0,
+      "parent_managed": true
     }
   },
   {
@@ -134,8 +182,14 @@
     "antigravity": {
       "model": "pro",
       "enable_write_tools": true,
-      "enable_subagent_tools": false,
+      "enable_subagent_tools": true,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "performance-implementation",
+    "delegation": {
+      "can_spawn_children": true,
+      "max_child_depth": 1,
+      "parent_managed": true
     }
   },
   {
@@ -152,6 +206,12 @@
       "enable_write_tools": false,
       "enable_subagent_tools": false,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "performance-verification",
+    "delegation": {
+      "can_spawn_children": false,
+      "max_child_depth": 0,
+      "parent_managed": true
     }
   },
   {
@@ -166,8 +226,14 @@
     "antigravity": {
       "model": "flash",
       "enable_write_tools": false,
-      "enable_subagent_tools": false,
+      "enable_subagent_tools": true,
       "enable_mcp_tools": true
+    },
+    "invocation_contract": "research-spike",
+    "delegation": {
+      "can_spawn_children": true,
+      "max_child_depth": 1,
+      "parent_managed": true
     }
   },
   {
@@ -183,6 +249,12 @@
       "enable_write_tools": true,
       "enable_subagent_tools": false,
       "enable_mcp_tools": false
+    },
+    "invocation_contract": "documentation-update",
+    "delegation": {
+      "can_spawn_children": false,
+      "max_child_depth": 0,
+      "parent_managed": true
     }
   }
 ]

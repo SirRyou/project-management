@@ -21,6 +21,8 @@ const AGENTS = {
   claude: {
     name: 'Claude Code',
     dest: (ws) => (ws ? join(process.cwd(), '.claude', 'skills') : join(homedir(), '.claude', 'skills')),
+    agentsDest: (ws) => (ws ? join(process.cwd(), '.claude', 'agents') : join(homedir(), '.claude', 'agents')),
+    subagentFormat: 'claude-markdown',
   },
   cursor: {
     name: 'Cursor',
@@ -96,7 +98,8 @@ function copySkills(dest) {
 }
 
 /**
- * Provision platform-specific subagents for runtimes like Codex and Antigravity.
+ * Provision platform-specific subagents for runtimes like Claude Code, Codex,
+ * and Antigravity.
  */
 function provisionSubagents(agentKey, agentConfig, isWorkspace) {
   if (!agentConfig.agentsDest) return [];
@@ -156,13 +159,32 @@ function provisionSubagents(agentKey, agentConfig, isWorkspace) {
             system_prompt: instructions,
             model: agent.antigravity.model || 'inherit',
             enable_write_tools: Boolean(agent.antigravity.enable_write_tools),
-            enable_subagent_tools: Boolean(agent.antigravity.enable_subagent_tools),
+            enable_subagent_tools: Boolean(agent.antigravity.enable_subagent_tools || agent.delegation?.can_spawn_children),
             enable_mcp_tools: Boolean(agent.antigravity.enable_mcp_tools),
           };
 
           const outFile = join(targetDir, `${agent.name}.json`);
           writeFileSync(outFile, JSON.stringify(agyConfig, null, 2), 'utf8');
           provisioned.push(`${agent.name}.json`);
+        } else if (agentConfig.subagentFormat === 'claude-markdown') {
+          // Claude Code custom subagents are Markdown files with YAML frontmatter.
+          // Read-only agents retain the capability boundary declared for Codex.
+          const frontmatter = [
+            `name: ${agent.name}`,
+            `description: ${agent.description}`,
+          ];
+
+          const canSpawnChildren = agent.delegation?.can_spawn_children === true;
+          if (agent.codex?.sandbox_mode === 'read-only') {
+            frontmatter.push(canSpawnChildren ? 'tools: Read, Grep, Glob, Agent' : 'tools: Read, Grep, Glob');
+          } else if (!canSpawnChildren) {
+            frontmatter.push('disallowedTools: Agent');
+          }
+
+          const markdownContent = `---\n${frontmatter.join('\n')}\n---\n\n${instructions}\n`;
+          const outFile = join(targetDir, `${agent.name}.md`);
+          writeFileSync(outFile, markdownContent, 'utf8');
+          provisioned.push(`${agent.name}.md`);
         }
       }
 
@@ -200,6 +222,12 @@ function parseArgs(args) {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--agent' && args[i + 1]) {
       result.agents.push(args[++i]);
+    } else if (args[i] === '--claude') {
+      result.agents.push('claude');
+    } else if (args[i] === '--codex') {
+      result.agents.push('codex');
+    } else if (args[i] === '--agy') {
+      result.agents.push('antigravity');
     } else if (args[i] === '--workspace' || args[i] === '-w') {
       result.workspace = true;
     } else if (!args[i].startsWith('-')) {
@@ -322,7 +350,7 @@ function main() {
       }
       console.log('\nFlags:');
       console.log('  --workspace, -w   Install to current project directory instead of home directory');
-      console.log('  --agent <name>    Target specific agent (e.g. codex, antigravity, claude, cursor, gemini)\n');
+      console.log('  --agent <name>    Target specific agent (e.g. codex, antigravity, claude, cursor, gemini)\n  --claude          Shorthand for --agent claude\n  --codex           Shorthand for --agent codex\n  --agy             Shorthand for --agent antigravity\n');
       break;
     }
   }
