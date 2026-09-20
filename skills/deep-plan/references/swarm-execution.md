@@ -83,9 +83,33 @@ IN_REVIEW -> BLOCKED | FAILED
 
 Use `CANCELLED` when the user stops the epic. Detect and record deadlocks, invalid DAGs, unavailable required capabilities, and quota exhaustion rather than treating them as completion.
 
-## Resume Protocol
+## Pause and Resume Protocol
 
-When a session ends, quota is exhausted, or a handoff occurs, resume from the intent, grounding, risk, tiered plan, DAG, ledger, worker commit records, and handoff summary. Validate the current repository and integrated branch before dispatching new work.
+The automation CLI is executed as `python "<skill-dir>/script/deep_plan.py"` from the target project root (where `<skill-dir>` is the directory where this `deep-plan` skill is installed).
+
+### Intentional Pause
+
+When the user or orchestrator stops the swarm (quota exhaustion, fatigue, end-of-day, blocker):
+1. **Coordinate with Workers:** Signal running workers to halt and return their in-flight progress (`[Step X/Y Completed: ...]`).
+2. **Commit In-Flight Worktree Changes:** Ensure workers commit any uncommitted changes to their task branches as a WIP commit (`git commit -m "wip(T{n}): step X/Y - <summary>"`). The CLI snapshots the parent repository checkout only; dirty worktree changes must be committed before pause to prevent data loss.
+3. **Execute CLI Pause:** Run the `pause` command with repeatable `--task-progress` flags for each in-flight task:
+
+```bash
+python "<skill-dir>/script/deep_plan.py" pause <epic-slug> \
+  --reason <reason> \
+  [--note "<context note>"] \
+  [--task-progress <task-id>:<completed-step>:<total-steps> ...]
+```
+
+This records declared step-level progress for in-flight tasks, creates a timestamped handoff dossier in `handoff/`, populates the ledger's Resume Checkpoint section, and persists git and task snapshots.
+
+### Resume and Reconciliation
+
+When a session starts or resumes:
+```bash
+python "<skill-dir>/script/deep_plan.py" resume <epic-slug>
+```
+The command verifies repository and branch integrity against the recorded checkpoint, inspects in-flight worktrees for unreviewed commits, reports pending reviews, lists ready-to-dispatch tasks, and prints an actionable briefing. For crash recovery where no prior `pause` occurred, `resume` still reconciles on-disk worktree state and ready tasks. Validate the current repository and integrated branch before dispatching new work.
 
 ## Final Epic Verification
 

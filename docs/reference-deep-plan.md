@@ -346,18 +346,52 @@ Probes the commit for hidden failure modes:
 
 ---
 
-## 13. Resume Protocol & Checkpoint Format
+## 13. Pause and Resume Protocol & Checkpoint Format
 
-When an execution session is restored following context exhaustion or restart:
+The Deep Plan CLI provides deterministic commands (`pause` and `resume`) for session lifecycle transitions.
 
-1. **Read State:** Read `.deep-plan/<epic-slug>/execution-state.json`; inspect `progress-ledger.md` as the generated human-readable projection.
-2. **Verify Git State:** Confirm parent branch HEAD matches the last `Integrated Commit` recorded in Section 5.
-3. **Scan DAG:** Identify tasks currently marked `READY_TO_DISPATCH`.
-4. **Reconcile In-Flight Worktrees:**
-   - If a task was `IN_PROGRESS`, verify if a commit exists in its worktree.
-   - If a commit exists, dispatch review (`IN_REVIEW`).
-   - If no commit exists or worktree is dirty, restart the task in a clean worktree.
-5. **Resume Dispatch:** Continue the swarm loop without re-planning completed tasks.
+### Pause State Schema (`pause_state` in `execution-state.json`)
+
+When an epic is paused, `execution-state.json` contains a top-level `pause_state` object:
+
+```json
+{
+  "pause_state": {
+    "reason": "quota",
+    "note": "Worker finished step 2, ready for verification",
+    "paused_at": "2026-09-20T10:00:00Z",
+    "parent_branch": "main",
+    "parent_head": "018ef87a6f26...",
+    "handoff_path": "handoff/HANDOFF-2026-09-20T1000.md",
+    "session_tasks_completed": ["T01", "T02"],
+    "in_flight_tasks": {
+      "T03": {
+        "status": "IN_PROGRESS",
+        "worktree": ".worktrees/T03-core",
+        "branch": "task/T03-core",
+        "step_progress": {
+          "completed_step": 2,
+          "total_steps": 5,
+          "summary": "Implement core functionality"
+        }
+      }
+    }
+  }
+}
+```
+
+### Resume and Reconciliation Protocol
+
+When `python "<skill-dir>/script/deep_plan.py" resume <epic-slug>` is executed:
+
+1. **Read & Verify State:** Loads `execution-state.json` and DAG; verifies parent branch HEAD against the recorded `parent_head`.
+2. **Reconcile In-Flight Worktrees:**
+   - Checks whether in-progress worktrees exist on disk.
+   - Inspects git log for unreviewed commits ahead of parent branch.
+   - Cross-references declared `step_progress` with task cards to print next implementation steps.
+3. **Audit Review States:** Reports pending or failing review axes for in-review tasks.
+4. **Scan Ready Tasks:** Identifies all tasks marked `READY_TO_DISPATCH` whose dependencies are complete.
+5. **Clear Pause State & Brief:** Sets `pause_state: null`, records a `resumed` audit event, updates the progress ledger, and prints the briefing. All next actions remain PM decisions (no auto-advancement).
 
 ---
 

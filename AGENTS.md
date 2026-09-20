@@ -20,8 +20,9 @@ project-management/
 │   │   └── references/                     # Context-specific guides
 │   ├── deep-plan/                          # Feature planning skill
 │   │   ├── SKILL.md
-│   │   ├── references/                     # Phase-specific guides
-│   │   └── templates/                      # Roadmap templates
+│   │   ├── script/                         # Python CLI tool (deterministic state engine)
+│   │   ├── references/                     # Phase-specific guides & subagent roles
+│   │   └── templates/                      # Roadmap & task templates
 │   └── investigate/                        # Debugging skill
 │       ├── SKILL.md
 │       └── runtime-bindings.md             # Platform-specific glue template
@@ -51,6 +52,30 @@ python skills/tree-of-work/scripts/tree_of_work.py reset
 
 # Override state directory
 python skills/tree-of-work/scripts/tree_of_work.py --state-dir PATH <command>
+```
+
+### Deep Plan (feature planning & swarm execution)
+
+```bash
+# Scaffold a new epic workspace (.deep-plan/<epic-slug>/)
+python skills/deep-plan/script/deep_plan.py init <epic-slug>
+
+# Synchronize progress ledger and validate DAG & task cards
+python skills/deep-plan/script/deep_plan.py sync-ledger <epic-slug>
+python skills/deep-plan/script/deep_plan.py validate <epic-slug>
+
+# Check ready tasks for dispatch
+python skills/deep-plan/script/deep_plan.py status <epic-slug>
+python skills/deep-plan/script/deep_plan.py ready <epic-slug>
+
+# Provision an isolated worktree for a ready task
+python skills/deep-plan/script/deep_plan.py worktree-create <epic-slug> <task-id> --parent <branch-or-commit>
+
+# Gracefully pause execution with in-flight task progress and generate handoff dossier
+python skills/deep-plan/script/deep_plan.py pause <epic-slug> --reason <quota|tired|eod|blocker|other> --task-progress <task-id>:<completed-step>:<total-steps>
+
+# Resume paused epic and reconcile worktrees
+python skills/deep-plan/script/deep_plan.py resume <epic-slug>
 ```
 
 ## Architecture & Design Decisions

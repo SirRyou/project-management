@@ -16,9 +16,11 @@
 - [x] Added tests for scaffold creation, DAG cycle rejection, worktree safety, incomplete review fan-in, and the complete task lifecycle.
 - [x] Updated `CHANGELOG.md` under `Unreleased`.
 
+- [x] Added `pause` and `resume` commands with step-level task progress tracking, timestamped handoff dossier generation, and worktree reconciliation.
+
 ## Next immediate steps for next session
 
-- [ ] Add resume reconciliation and final closeout commands if full execution automation is still desired.
+- [ ] Add final closeout command if full execution automation is still desired.
 - [ ] Decide whether the state schema should gain explicit file locking or remain single-writer with atomic replacement.
 - [ ] Install or provide Ruff if Python lint verification is required; the current environment reports `No module named ruff`.
 - [ ] Review the committed diff before publishing or merging.

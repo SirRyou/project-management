@@ -50,13 +50,17 @@ flowchart TD
     P6 --> Done(["Epic completed and verified"])
 ```
 
+### Automation CLI Location
+
+The deterministic state machine script is located at `<skill-dir>/script/deep_plan.py` relative to this skill's installation directory. Always execute CLI commands from the target repository root (containing `.deep-plan/`) using `python "<skill-dir>/script/deep_plan.py" <command> <epic-slug> [options]`.
+
 ### Phase 1: Intent and Entry Preflight
 
 - Read [intake-and-grounding.md](references/intake-and-grounding.md).
 - Infer communication depth from the request; do not ask the user to classify themselves.
 - Ask for autonomy mode and task type only when the request does not establish them.
 - Build and persist an intent dossier containing goals, behaviors, invariants, outputs, constraints, assumptions, and unresolved decisions.
-- After selecting a safe epic slug, initialize the artifact workspace with `python script/deep_plan.py init <epic-slug>`. Run `validate <epic-slug> --stage scaffold` before writing plan artifacts.
+- After selecting a safe epic slug, initialize the artifact workspace with `python "<skill-dir>/script/deep_plan.py" init <epic-slug>`. Run `validate <epic-slug> --stage scaffold` before writing plan artifacts.
 - Treat `.deep-plan/<epic-slug>/execution-state.json` as PM-owned canonical state. Workers and reviewers return evidence; only the PM / Orchestrator mutates state through the automation CLI. `progress-ledger.md` is a generated projection.
 - Run a lightweight preflight before committing to the full workflow. If grounding later proves the request simple, present the direct-implementation versus full-plan choice and record the decision.
 
@@ -74,7 +78,7 @@ flowchart TD
 - Generate Tier 1 scope and invariants, Tier 2 architecture contracts, Tier 3 atomic tasks, `dependency-dag.json`, and `progress-ledger.md`.
 - Link every tier to the intent dossier, grounding evidence, and relevant risks.
 - Treat a task as atomic when it is one independently verifiable behavioral or contract change. File count is a heuristic, not a hard limit.
-- Run `python script/deep_plan.py sync-ledger <epic-slug>` after updating the DAG, then run `python script/deep_plan.py validate <epic-slug>`. Correct structural errors before plan review.
+- Run `python "<skill-dir>/script/deep_plan.py" sync-ledger <epic-slug>` after updating the DAG, then run `python "<skill-dir>/script/deep_plan.py" validate <epic-slug>`. Correct structural errors before plan review.
 
 ### Phase 4: Adversarial Plan Review
 
@@ -84,7 +88,7 @@ flowchart TD
 
 ### Phase 5: Finalize and Approve the Plan
 
-- Run `python script/deep_plan.py validate <epic-slug>` to validate artifact links, task IDs, dependency references, DAG acyclicity, Tier 3 fields, and ledger initialization.
+- Run `python "<skill-dir>/script/deep_plan.py" validate <epic-slug>` to validate artifact links, task IDs, dependency references, DAG acyclicity, Tier 3 fields, and ledger initialization.
 - In Collaborative Mode, require explicit user approval after the complete Tier 1, Tier 2, and Tier 3 plan.
 - In Autonomous Mode, proceed after validation unless a boundary-changing architecture fork requires user synchronization.
 
@@ -93,14 +97,14 @@ flowchart TD
 - Read [swarm-execution.md](references/swarm-execution.md).
 - Read [agent-catalog.md](references/agent-catalog.md) for role routing, [invocation-contracts.md](references/invocation-contracts.md) for child prompts, and [codex-multi-agent.md](references/codex-multi-agent.md) when the active runtime is Codex.
 - Read [automation.md](references/automation.md) when scaffolding a workspace, validating a plan, selecting ready tasks, or provisioning a worker worktree.
-- Begin every dispatch loop with `python script/deep_plan.py status <epic-slug>` and `python script/deep_plan.py ready <epic-slug>`. Create a worker worktree only with `python script/deep_plan.py worktree-create <epic-slug> <task-id> --parent <parent-ref>` from a clean parent checkout.
+- Begin every dispatch loop with `python "<skill-dir>/script/deep_plan.py" status <epic-slug>` and `python "<skill-dir>/script/deep_plan.py" ready <epic-slug>`. Create a worker worktree only with `python "<skill-dir>/script/deep_plan.py" worktree-create <epic-slug> <task-id> --parent <parent-ref>` from a clean parent checkout.
 - Record worker summaries with `worker-record`, reviewer verdicts with `review-record`, and integration evidence with `integration-record` / `verify-record`. Use `transition` only from the parent PM checkout; never let a child agent edit execution state directly.
 - Dispatch only tasks whose artifact and contract dependencies are completed and integrated.
 - Use per-task worktrees or branches. Parallelize conservatively only when target ownership and integration risk are acceptable.
 - Select verification from the task-declared mode. Apply TDD to code tasks; follow repository conventions for documentation and other non-code tasks.
 - For code changes, require Code Auditor and Adversarial Challenger review. Add security or performance reviewers from the risk-and-task matrix.
 - Integrate approved commits into the parent branch, run verification on the integrated tree, and only then unlock dependents.
-- Maintain the ledger state machine and bounded remediation policy. Resume from the ledger, DAG, plan artifacts, commit records, and handoff summary after quota exhaustion or session loss.
+- Maintain the ledger state machine and bounded remediation policy. When intentionally pausing, enforce worktree hygiene (ensure active workers commit WIP changes to prevent data loss), then execute `python "<skill-dir>/script/deep_plan.py" pause <epic-slug> --reason <reason>` with repeatable `--task-progress <task-id>:<completed-step>:<total-steps>` for every in-flight task. On session start, execute `python "<skill-dir>/script/deep_plan.py" resume <epic-slug>` for worktree reconciliation and session briefing. Resume from the ledger, DAG, plan artifacts, commit records, and handoff summary after quota exhaustion or session loss.
 - Run Documentation Writer after implementation when public APIs, configuration, migrations, or breaking changes require documentation.
 
 ### Fan-Out and Fan-In Contract

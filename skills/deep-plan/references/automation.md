@@ -1,6 +1,12 @@
 # Deep Plan Automation Gates
 
-Use `script/deep_plan.py` for deterministic workspace and plan-state checks. Run it from the repository root containing `.deep-plan/`.
+The automation CLI script is located at `<skill-dir>/script/deep_plan.py`, where `<skill-dir>` is the installation directory of this `deep-plan` skill (e.g. `skills/deep-plan/`, `~/.claude/skills/deep-plan/`, or your global/workspace skill directory).
+
+Always execute CLI commands with the **target repository root** (containing `.deep-plan/`) as your working directory (`CWD`), pointing to the script via its skill directory path:
+```bash
+python "<skill-dir>/script/deep_plan.py" <command> <epic-slug> [options]
+```
+*(In the examples below, `deep_plan.py` refers to `<skill-dir>/script/deep_plan.py`)*.
 
 The canonical execution state is `.deep-plan/<epic-slug>/execution-state.json`. The PM / Orchestrator is the only writer. Workers and reviewers return summaries and verdicts; the PM records them through the CLI. `progress-ledger.md` is a generated human-readable projection and must not be edited independently.
 
@@ -81,6 +87,53 @@ python script/deep_plan.py worktree-create <epic-slug> <task-id> --parent <branc
 ```
 
 The command refuses a dirty parent checkout, an existing task branch or worktree, an unknown/non-ready task, and an unverifiable parent ref. On success it creates `.worktrees/<task-id>-<slug>`, creates a `task/<task-id>-<slug>` branch, and records the worktree with status `IN_PROGRESS` in the ledger.
+
+## Pause and Resume Protocol
+
+The CLI is the PM / Orchestrator agent's tool for gracefully stopping and restoring swarm execution when the user wants to stop for later (quota limits, fatigue, end-of-day, external blockers).
+
+### In-Flight Pause Playbook
+
+When execution must pause while tasks are in flight:
+
+1. **Signal Active Workers:** Request each running Worker Implementer subagent to halt and provide an in-flight status report. Workers should report their last completed step based on incremental logs (`[Step X/Y Completed: ...]`).
+2. **Enforce Worktree Hygiene (WIP Commit):** Ensure each active worker stages and commits all modified files in its worktree (`git commit -m "wip(T{n}): step X/Y - <summary>"`). 
+   > [!IMPORTANT]
+   > `pause` snapshots the *parent repository's* HEAD and branch, but **does not touch or commit files inside `.worktrees/`**. Never leave uncommitted dirty files in worker worktrees when pausing, or uncommitted work may be lost during session reset.
+3. **Determine Step Counts:** Cross-check the worker's reported step `X` and total steps `Y` against the ordered list in Section 3 of `.deep-plan/<epic-slug>/tasks/<task-id>-*.md`.
+4. **Execute CLI Pause:** Run the `pause` command from the parent repository root, repeating `--task-progress` for every in-flight task:
+
+```bash
+python "<skill-dir>/script/deep_plan.py" pause <epic-slug> \
+  --reason quota \
+  --note "T03 worker finished implementing interfaces, needs test run" \
+  --task-progress T03:3:5 \
+  --task-progress T04:1:3
+```
+
+The command:
+1. Records declared step-level progress for in-flight tasks (`TASK_ID:COMPLETED_STEP:TOTAL_STEPS`).
+2. Snapshots parent branch name and current HEAD commit.
+3. Generates a timestamped handoff dossier in `.deep-plan/<epic-slug>/handoff/HANDOFF-YYYY-MM-DDTHHMM.md` containing session summaries, in-flight worktree details, step progress, and resume instructions.
+4. Projects real checkpoint data into Section 5 of `progress-ledger.md`.
+5. Sets `pause_state` in `execution-state.json` and records a `paused` audit event.
+
+Allowed reasons: `quota`, `tired`, `eod`, `blocker`, `other`.
+
+### Resume
+
+```bash
+python "<skill-dir>/script/deep_plan.py" resume <epic-slug>
+```
+
+The command:
+1. Verifies parent branch HEAD matches the recorded checkpoint and warns on discrepancies.
+2. Reconciles in-progress worktrees (checks for worker commits ahead of parent, reports next implementation steps).
+3. Reports pending and failed reviews for in-review tasks.
+4. Identifies ready-to-dispatch tasks from the DAG.
+5. Clears `pause_state`, records a `resumed` audit event, and prints an actionable briefing for the next session.
+
+`resume` is report-only and does not auto-advance tasks; the PM decides next actions. It also supports crash recovery when no prior pause command was executed.
 
 ## Safety Boundary
 

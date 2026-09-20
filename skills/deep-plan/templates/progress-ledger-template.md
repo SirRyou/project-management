@@ -63,7 +63,8 @@ Unlock dependents only after the integrated commit, integrated-tree verification
 
 - **Last completed transition:** `[task/state]`
 - **Parent branch:** `[branch]`
+- **Parent HEAD:** `[commit]`
 - **Integrated commits:** `[list]`
 - **Next ready tasks:** `[list]`
-- **Pending user decisions:** `[list]`
+- **In-flight tasks:** `[list with step progress]`
 - **Handoff summary:** `[path]`

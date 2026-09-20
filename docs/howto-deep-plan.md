@@ -302,28 +302,34 @@ All reviewers have passed the worker commit. You must safely merge it into the p
 ## 11. How to Pause, Checkpoint, and Resume Execution
 
 ### Problem
-Execution is interrupted due to session length limits, token exhaustion, or an external restart.
+Execution needs to pause due to quota exhaustion, end-of-day stop, fatigue, or session interruption.
 
 ### Procedure
-1. **Inspect Ledger Checkpoint:**
-   Open `.deep-plan/<epic-slug>/progress-ledger.md`. Check:
-   - Section 1: Last completed tasks and current task statuses.
-   - Section 5: Resume Checkpoint (last transition, parent branch, integrated commits).
-
-2. **Verify Repository State:**
-   Confirm git status on the parent branch:
+1. **Gracefully Pause the Epic:**
+   Prompt the agent to pause or run the CLI (located at `<skill-dir>/script/deep_plan.py`):
    ```bash
-   git status --porcelain
-   git log -1 --oneline
+   python "<skill-dir>/script/deep_plan.py" pause <epic-slug> \
+     --reason quota \
+     --note "Worker finished step 2, ready for verification" \
+     --task-progress T03:2:5
    ```
-   Ensure the parent branch HEAD matches the last `Integrated Commit` in the ledger.
+   *Note: Ensure any active in-flight worker commits pending changes as a WIP commit (`git commit -m "wip(T{n}): step X/Y - <summary>"`) in its worktree before pausing so uncommitted files are preserved.*
+   
+   This snapshots parent Git state, records task step progress, populates Section 5 of `progress-ledger.md`, and generates a timestamped dossier at `.deep-plan/<epic-slug>/handoff/HANDOFF-YYYY-MM-DDTHHMM.md`.
 
-3. **Resume Execution:**
-   Prompt the agent to resume:
+2. **Resume and Reconcile in a New Session:**
+   In the new session, prompt the agent:
    ```text
-   Resume execution of epic <epic-slug> from the progress ledger.
+   Resume execution of epic <epic-slug>.
    ```
-   The PM orchestrator reads `dependency-dag.json`, selects tasks in `READY_TO_DISPATCH`, and resumes the dispatch loop. **Do not re-run planning or redo completed tasks.**
+   The PM agent executes:
+   ```bash
+   python "<skill-dir>/script/deep_plan.py" resume <epic-slug>
+   ```
+   The CLI verifies that parent branch HEAD matches the recorded checkpoint, reconciles in-flight worktrees (detecting commits and step progress), reports pending reviews, lists dispatchable tasks, and prints an actionable briefing.
+
+3. **Continue Dispatch Loop:**
+   Follow the briefing's recommended actions (e.g. advance completed commits to review, continue next implementation steps, or dispatch newly unblocked tasks) without re-planning or repeating completed tasks.
 
 ---
 

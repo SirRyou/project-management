@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added PM-owned `execution-state.json` with atomic event updates, guarded task transitions, reviewer fan-in records, integration evidence, and generated ledger projections.
 - Added deterministic Deep Plan automation for workspace scaffolding, Tier 3/DAG validation, ledger synchronization, readiness reporting, guarded worktree creation, worker results, reviewer verdicts, and integrated verification.
 - Added focused Python tests covering scaffold validation, DAG cycle rejection, worktree safety, incomplete review fan-in, and the completed task lifecycle.
+- Added `pause` and `resume` commands to the Deep Plan CLI for graceful session handoff with step-level task progress tracking, timestamped handoff dossier generation, worktree reconciliation, and session briefings.
 
 ### Changed
 

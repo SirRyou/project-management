@@ -39,7 +39,7 @@ Return the output contract defined by your role specification.
 | `exploration-dossier` | Codebase Explorer | Grounding Dossier |
 | `tier2-module-design` | System Architect | Tier 2 module contract |
 | `tier3-task-decomposition` | Task Decomposer | Tier 3 cards and dependency DAG |
-| `worker-task-execution` | Worker Implementer | Commit, tests, and execution summary |
+| `worker-task-execution` | Worker Implementer | Incremental step logs, commit/tests/summary, or WIP commit & in-flight pause contract |
 | `plan-challenge` | Plan Challenger | Plan PASS/REVISE/USER_DECISION_REQUIRED verdict |
 | `code-audit` | Code Auditor | Separate Standards and Spec PASS/FAIL verdicts |
 | `adversarial-challenge` | Adversarial Challenger | Invariant and edge-case findings |
