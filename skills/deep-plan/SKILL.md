@@ -56,6 +56,8 @@ flowchart TD
 - Infer communication depth from the request; do not ask the user to classify themselves.
 - Ask for autonomy mode and task type only when the request does not establish them.
 - Build and persist an intent dossier containing goals, behaviors, invariants, outputs, constraints, assumptions, and unresolved decisions.
+- After selecting a safe epic slug, initialize the artifact workspace with `python script/deep_plan.py init <epic-slug>`. Run `validate <epic-slug> --stage scaffold` before writing plan artifacts.
+- Treat `.deep-plan/<epic-slug>/execution-state.json` as PM-owned canonical state. Workers and reviewers return evidence; only the PM / Orchestrator mutates state through the automation CLI. `progress-ledger.md` is a generated projection.
 - Run a lightweight preflight before committing to the full workflow. If grounding later proves the request simple, present the direct-implementation versus full-plan choice and record the decision.
 
 ### Phase 2: Grounding, Gaps, and Risks
@@ -72,6 +74,7 @@ flowchart TD
 - Generate Tier 1 scope and invariants, Tier 2 architecture contracts, Tier 3 atomic tasks, `dependency-dag.json`, and `progress-ledger.md`.
 - Link every tier to the intent dossier, grounding evidence, and relevant risks.
 - Treat a task as atomic when it is one independently verifiable behavioral or contract change. File count is a heuristic, not a hard limit.
+- Run `python script/deep_plan.py sync-ledger <epic-slug>` after updating the DAG, then run `python script/deep_plan.py validate <epic-slug>`. Correct structural errors before plan review.
 
 ### Phase 4: Adversarial Plan Review
 
@@ -81,13 +84,17 @@ flowchart TD
 
 ### Phase 5: Finalize and Approve the Plan
 
-- Validate artifact links, task IDs, dependency references, DAG acyclicity, and ledger initialization.
+- Run `python script/deep_plan.py validate <epic-slug>` to validate artifact links, task IDs, dependency references, DAG acyclicity, Tier 3 fields, and ledger initialization.
 - In Collaborative Mode, require explicit user approval after the complete Tier 1, Tier 2, and Tier 3 plan.
 - In Autonomous Mode, proceed after validation unless a boundary-changing architecture fork requires user synchronization.
 
 ## Execution Workflow
 
 - Read [swarm-execution.md](references/swarm-execution.md).
+- Read [agent-catalog.md](references/agent-catalog.md) for role routing, [invocation-contracts.md](references/invocation-contracts.md) for child prompts, and [codex-multi-agent.md](references/codex-multi-agent.md) when the active runtime is Codex.
+- Read [automation.md](references/automation.md) when scaffolding a workspace, validating a plan, selecting ready tasks, or provisioning a worker worktree.
+- Begin every dispatch loop with `python script/deep_plan.py status <epic-slug>` and `python script/deep_plan.py ready <epic-slug>`. Create a worker worktree only with `python script/deep_plan.py worktree-create <epic-slug> <task-id> --parent <parent-ref>` from a clean parent checkout.
+- Record worker summaries with `worker-record`, reviewer verdicts with `review-record`, and integration evidence with `integration-record` / `verify-record`. Use `transition` only from the parent PM checkout; never let a child agent edit execution state directly.
 - Dispatch only tasks whose artifact and contract dependencies are completed and integrated.
 - Use per-task worktrees or branches. Parallelize conservatively only when target ownership and integration risk are acceptable.
 - Select verification from the task-declared mode. Apply TDD to code tasks; follow repository conventions for documentation and other non-code tasks.
@@ -95,6 +102,18 @@ flowchart TD
 - Integrate approved commits into the parent branch, run verification on the integrated tree, and only then unlock dependents.
 - Maintain the ledger state machine and bounded remediation policy. Resume from the ledger, DAG, plan artifacts, commit records, and handoff summary after quota exhaustion or session loss.
 - Run Documentation Writer after implementation when public APIs, configuration, migrations, or breaking changes require documentation.
+
+### Fan-Out and Fan-In Contract
+
+The PM / Orchestrator owns dispatch, aggregation, integration, and ledger transitions. Child agents provide evidence; they do not unlock dependencies or mark DAG tasks complete.
+
+1. **Fan out execution tasks only when safe:** select every `READY_TO_DISPATCH` task whose dependencies are integrated. Dispatch concurrently only when target ownership is disjoint and integration risk is explicitly acceptable; otherwise serialize. Give each worker its own worktree, task contract, relevant evidence, integration target, verification mode, and output contract.
+2. **Fan out review per worker commit:** after a worker submits a commit, transition the task to `IN_REVIEW` and dispatch every reviewer activated by the risk matrix. Code changes require the Code Auditor's Standards and Spec axes plus the Adversarial Challenger; add security or performance reviewers when applicable. Reviewers inspect the exact worker commit and return task-scoped verdicts and findings.
+3. **Fan in before integration:** wait until every required reviewer for that task has returned a verdict. Record each verdict and finding in the ledger. A single `PASS` is insufficient; any `FAIL` enters bounded remediation, and an unresolved or exhausted review path blocks the task.
+4. **Integrate and verify the convergence point:** only after all required reviews pass, transition to `INTEGRATING`, merge or cherry-pick the approved worker commit into the parent branch, and run affected verification on the integrated tree. Record the integrated commit, verification evidence, reviewer verdicts, invariant impact, and ledger transition.
+5. **Unlock only after fan-in is complete:** transition the task to `COMPLETED` only after integrated verification passes. Then recompute the DAG and mark a dependent `READY_TO_DISPATCH` only when all prerequisites are `COMPLETED` and integrated.
+
+For independent `T03` and `T04`, the PM may dispatch both workers concurrently. Each worker receives its own review fan-out and integration gate; only after both integrated results are verified may a task depending on both be dispatched.
 
 ## Completion Evidence
 

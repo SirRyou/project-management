@@ -33,7 +33,8 @@ All planning and execution artifacts reside in a dedicated directory per epic:
 │   ├── T01-[task-name].md
 │   └── T02-[task-name].md
 ├── dependency-dag.json           # Phase 3: Machine-readable acyclic task dependency graph
-└── progress-ledger.md            # Phase 3-5: Execution state machine and evidence journal
+├── execution-state.json          # Phase 3-5: PM-owned canonical execution state
+└── progress-ledger.md             # Phase 3-5: Generated human-readable state projection
 ```
 
 ### Artifact Roles
@@ -47,7 +48,8 @@ All planning and execution artifacts reside in a dedicated directory per epic:
 | `modules/M{n}-*.md` | System / Security Architect | Phase 3 | Module interface contracts, schemas, interaction diagrams, and child task lists. |
 | `tasks/T{n}-*.md` | Task Decomposer | Phase 3 | Atomic task directives, file targets, failure defenses, and verification commands. |
 | `dependency-dag.json` | Task Decomposer | Phase 3 | Machine-readable dependency graph defining prerequisite execution ordering. |
-| `progress-ledger.md` | PM / Orchestrator | Phase 3–5 | Single source of truth for task states, review verdicts, commit hashes, and resume checkpoints. |
+| `execution-state.json` | PM / Orchestrator | Phase 3–5 | Canonical task states, review verdicts, commit hashes, events, and resume checkpoints. |
+| `progress-ledger.md` | PM / Orchestrator | Phase 3–5 | Generated human-readable projection; do not edit independently. |
 
 ---
 
@@ -87,7 +89,7 @@ flowchart TD
   - Author Tier 1 epic scope and invariants (`03-tier1-epic.md`).
   - Author Tier 2 architecture contracts (`modules/M{n}-*.md`) via System/Security Architect.
   - Author Tier 3 atomic task cards (`tasks/T{n}-*.md`) via Task Decomposer.
-  - Generate `dependency-dag.json` and initialize `progress-ledger.md`.
+  - Generate `dependency-dag.json`, initialize `execution-state.json`, and generate `progress-ledger.md`.
 
 ### Phase 4: Adversarial Plan Review
 - **Inputs:** Full planning artifact bundle (`00` through `tasks/`, `dependency-dag.json`).
@@ -227,9 +229,13 @@ The dependency DAG defines execution order and artifact prerequisites.
 
 ---
 
-## 8. Swarm Execution Ledger Specification (`progress-ledger.md`)
+## 8. Swarm Execution State and Ledger Projection
 
-The progress ledger is the single source of truth for task execution state.
+`execution-state.json` is the single source of truth for task execution state. `progress-ledger.md` is regenerated from it for human inspection.
+
+The PM / Orchestrator is the only writer. Workers and reviewers return summaries and evidence; they do not edit execution state directly. Every mutation appends an event, increments `state_revision`, writes atomically, and regenerates the ledger projection.
+
+Each task state records its status, dependencies, worktree, worker and integrated commits, required review axes, reviewer verdicts, evidence paths, remediation count, and integrated verification evidence. A task cannot enter `INTEGRATING` until every required review is present and `PASS`; it cannot enter `COMPLETED` until integrated verification is recorded.
 
 ### Allowed Status Values
 
@@ -344,7 +350,7 @@ Probes the commit for hidden failure modes:
 
 When an execution session is restored following context exhaustion or restart:
 
-1. **Read Ledger:** Parse `.deep-plan/<epic-slug>/progress-ledger.md`.
+1. **Read State:** Read `.deep-plan/<epic-slug>/execution-state.json`; inspect `progress-ledger.md` as the generated human-readable projection.
 2. **Verify Git State:** Confirm parent branch HEAD matches the last `Integrated Commit` recorded in Section 5.
 3. **Scan DAG:** Identify tasks currently marked `READY_TO_DISPATCH`.
 4. **Reconcile In-Flight Worktrees:**
@@ -362,7 +368,7 @@ When an execution session is restored following context exhaustion or restart:
 | Capability | Purpose | Fallback Behavior |
 | :--- | :--- | :--- |
 | `file-read` | Inspect codebase, read artifacts | Mandatory. Cannot proceed without read tools. |
-| `file-write` | Author `.deep-plan/` files, update ledger | Mandatory. Cannot proceed without write tools. |
+| `file-write` | Author `.deep-plan/` files, update PM-owned execution state and its projection | Mandatory. Cannot proceed without write tools. |
 | `run_command` | Git worktrees, tests, linters | Mandatory. Cannot execute or verify without command execution. |
 | `question` | Boundary fork decisions, Phase 5 approval | Prose question output in main chat; wait for user reply. |
 | `subagent` | Independent reviewer and explorer contexts | Fresh-context prompt or serialized role isolation. |

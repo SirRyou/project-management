@@ -38,8 +38,11 @@ Security, performance, research, and documentation roles activate from the risk-
 ├── modules/
 ├── tasks/
 ├── dependency-dag.json
-└── progress-ledger.md
+├── execution-state.json
+└── progress-ledger.md              # Generated projection of execution-state.json
 ```
+
+`execution-state.json` is the PM-owned canonical execution state. Workers and reviewers return evidence; they do not edit it directly.
 
 See [the Codex multi-agent reference](references/codex-multi-agent.md) for runtime capability checks.
 

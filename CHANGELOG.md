@@ -14,12 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added task-declared verification modes, explicit dependency readiness, isolated worker integration, resume checkpoints, and bounded remediation states.
 - Added the Code Auditor contract with separate Standards and Spec review axes.
 - Added agent-facing Codex multi-agent configuration guidance.
+- Added PM-owned `execution-state.json` with atomic event updates, guarded task transitions, reviewer fan-in records, integration evidence, and generated ledger projections.
+- Added deterministic Deep Plan automation for workspace scaffolding, Tier 3/DAG validation, ledger synchronization, readiness reporting, guarded worktree creation, worker results, reviewer verdicts, and integrated verification.
+- Added focused Python tests covering scaffold validation, DAG cycle rejection, worktree safety, incomplete review fan-in, and the completed task lifecycle.
 
 ### Changed
 
 - Deep Plan now requires integrated-tree verification before unlocking dependent tasks.
 - Audience adaptation changes visible detail only; planning rigor and evidence requirements remain consistent.
 - Worker and specialist routing now derives from task metadata and the risk register.
+- `progress-ledger.md` is now a generated human-readable projection of the canonical PM execution state; child agents return evidence but do not mutate execution state directly.
 
 ### Documentation
 
