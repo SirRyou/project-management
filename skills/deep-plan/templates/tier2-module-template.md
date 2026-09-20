@@ -12,10 +12,20 @@
 - **Primary Responsibility:** [Single, clear summary of what this component owns]
 - **Blast Radius / Impacted Files:** [Directories and core files touched]
 - **Downstream Consumers:** [Other modules or external clients consuming this module]
+- **Owned State / Data:** [State, records, resources, or `None`; identify the authoritative owner]
+- **Inputs and Upstream Contracts:** [Named producers and contracts this module consumes]
+- **Design Status:** [Repository fact | proposed design | assumption; cite grounding evidence or decision ID]
 
 ---
 
 ## 2. Interface Contracts & Schemas
+
+### Contract Semantics
+- **Preconditions and validation owner:** [What must be true; where validation occurs]
+- **Success result and postconditions:** [Observable result and state guarantees]
+- **Failure results and retry / fallback policy:** [Structured errors, retryability, state after failure]
+- **Compatibility, migration, and rollback:** [Versioning, rollout, or `N/A` with reason]
+- **Observability:** [Logs, metrics, audit events, or `N/A` with reason]
 
 ### API / Function Signatures
 ```typescript
@@ -56,8 +66,15 @@ sequenceDiagram
 
 ---
 
-## 5. Child Tasks (Tier 3 Task Manifest)
-*This module decomposes into the following atomic execution tasks:*
+## 5. Invariant, NFR, and Risk Coverage
+| Trace | Enforcement Mechanism | Failure Behavior | Verification-Relevant Evidence |
+| :--- | :--- | :--- | :--- |
+| `INV-x` / `NFR-x` / `RISK-x` | [Module mechanism] | [How the system preserves the guarantee] | [Task, test, migration, or review evidence] |
+
+---
+
+## 6. Child Tasks (Tier 3 Task Manifest)
+*The Task Decomposer owns this manifest and updates it from the canonical task cards and DAG. The System Architect may list likely implementation seams, but must not assign task IDs or dependencies.*
 
 | Task ID | Task Name | Dependencies | Complexity | Assigned Spec |
 | :--- | :--- | :--- | :--- | :--- |

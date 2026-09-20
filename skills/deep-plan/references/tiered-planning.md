@@ -26,13 +26,13 @@ Use `templates/tier1-epic-template.md`. Record the problem, objective, use cases
 
 ## Tier 2: Architecture Contracts
 
-Use `templates/tier2-module-template.md`. Dispatch the System Architect for each module. Define ownership boundaries, interface contracts, schemas, sequence flows, error contracts, risk mitigations, and the contract that downstream tasks may rely on.
+Use `templates/tier2-module-template.md`. The PM must give the System Architect the epic slug and exact paths to `00-intent.md`, `01-grounding.md`, `02-risk-register.md`, `03-tier1-epic.md`, the `modules/` output directory, and the template. Do not instruct a fresh subagent only to read a named tier or dossier. Dispatch the System Architect for each module. Define ownership boundaries, interface contracts, schemas, sequence flows, error contracts, risk mitigations, and the contract that downstream tasks may rely on.
 
 If a Security Architect or another specialist is activated, require the specialist output to link back to the same Tier 1 invariants and risk register. Do not silently replace the general architecture contract without recording the reason.
 
 ## Tier 3: Atomic Execution Tasks
 
-Use `templates/tier3-task-template.md`. Define one independently verifiable behavioral or contract change per task. Permit the task to span implementation, tests, migrations, generated artifacts, or cross-package contracts when they jointly realize one completion criterion.
+Use `templates/tier3-task-template.md`. The PM must give the Task Decomposer the epic slug and exact paths to `00-intent.md`, `01-grounding.md`, `02-risk-register.md`, `03-tier1-epic.md`, every `modules/M*-*.md` input, the `tasks/` output directory, `dependency-dag.json`, and the template. Do not instruct a fresh subagent only to read a named tier or module. Define one independently verifiable behavioral or contract change per task. Permit the task to span implementation, tests, migrations, generated artifacts, or cross-package contracts when they jointly realize one completion criterion.
 
 Require every task to specify:
 

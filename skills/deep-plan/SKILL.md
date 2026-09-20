@@ -75,6 +75,14 @@ The deterministic state machine script is located at `<skill-dir>/script/deep_pl
 ### Phase 3: Tiered Planning
 
 - Read [tiered-planning.md](references/tiered-planning.md).
+- The PM / Orchestrator creates `03-tier1-epic.md` in `.deep-plan/<epic-slug>/` before dispatching planning roles. Every dispatch must name the epic slug and provide the exact relative paths below; never tell a fresh subagent only to "read Tier 1" or "read the grounding dossier."
+  - Intent: `.deep-plan/<epic-slug>/00-intent.md`
+  - Grounding: `.deep-plan/<epic-slug>/01-grounding.md`
+  - Risk register: `.deep-plan/<epic-slug>/02-risk-register.md`
+  - Tier 1 epic: `.deep-plan/<epic-slug>/03-tier1-epic.md`
+  - Tier 2 modules: `.deep-plan/<epic-slug>/modules/`
+  - Tier 3 task cards: `.deep-plan/<epic-slug>/tasks/`
+  - Dependency DAG: `.deep-plan/<epic-slug>/dependency-dag.json`
 - Generate Tier 1 scope and invariants, Tier 2 architecture contracts, Tier 3 atomic tasks, `dependency-dag.json`, and `progress-ledger.md`.
 - Link every tier to the intent dossier, grounding evidence, and relevant risks.
 - Treat a task as atomic when it is one independently verifiable behavioral or contract change. File count is a heuristic, not a hard limit.
