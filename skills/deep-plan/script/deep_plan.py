@@ -28,7 +28,7 @@ TEMPLATES = SKILL_ROOT / "templates"
 TASK_ID_RE = re.compile(r"^T[0-9]{2,}$")
 MODULE_ID_RE = re.compile(r"^M[0-9]{2,}$")
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
-TASK_FILE_RE = re.compile(r"^(T[0-9]{2,})-[a-z0-9][a-z0-9-]*\.md$")
+TASK_FILE_RE = re.compile(r"^(T[0-9]{2,})(?:-[a-z0-9][a-z0-9-]*)?\.md$")
 ALLOWED_KINDS = {
     "implementation",
     "migration",
@@ -58,6 +58,9 @@ ALLOWED_STATUSES = {
     "CANCELLED",
 }
 PAUSE_REASONS = ("quota", "tired", "eod", "blocker", "other")
+DEFAULT_REMEDIATION_LIMIT = 2
+REVIEW_AXES = {"standards", "spec", "challenger", "security", "performance", "documentation"}
+REVIEW_AXIS_ALIASES = {"security-audit": "security"}
 REQUIRED_ARTIFACTS = (
     "00-intent.md",
     "01-grounding.md",
@@ -341,12 +344,27 @@ def _task_cards(epic_dir: Path) -> dict[str, Path]:
 
 
 def _field(text: str, label: str) -> str | None:
-    match = re.search(rf"^- \*\*{re.escape(label)}:\*\*\s*(.+)$", text, re.MULTILINE)
-    return match.group(1).strip() if match else None
+    match = re.search(rf"^- \*\*{re.escape(label)}:\*\*[ \t]*(.+)$", text, re.MULTILINE)
+    if match and match.group(1).strip():
+        return match.group(1).strip()
+    multi_match = re.search(rf"^- \*\*{re.escape(label)}:\*\*\s*\n((?:[ \t]+[-*].*\n?)+)", text, re.MULTILINE)
+    if multi_match and multi_match.group(1).strip():
+        return multi_match.group(1).strip()
+    return None
+
+
+PLACEHOLDER_PATTERNS = re.compile(
+    r"\[(?:Task Name|explicit paths|describe testable|list prerequisite|one observable|"
+    r"evidence that|what must|commit, generated|tasks or modules|path/symbol|failure|"
+    r"detection|defense|section|risk-id|INV-x)\]|\{[nm]\}|\b(?:TODO|TBD|FIXME)\b",
+    re.IGNORECASE,
+)
 
 
 def _is_placeholder(value: str) -> bool:
-    return not value or "[" in value or "{n}" in value.lower() or value in {"—", "-"}
+    if not value or value in {"—", "-"}:
+        return True
+    return bool(PLACEHOLDER_PATTERNS.search(value))
 
 
 def _artifact_reference_exists(epic_dir: Path, value: str) -> bool:
@@ -384,9 +402,11 @@ def _validate_task_card(path: Path, task: dict, epic_dir: Path) -> list[str]:
         value = values.get(label)
         if value and not _artifact_reference_exists(epic_dir, value):
             errors.append(f"{path.name} references a missing artifact in {label}: {value}.")
-    if values.get("Kind") != task["kind"]:
+    kind = values.get("Kind", "").strip("` ")
+    if kind != task["kind"]:
         errors.append(f"{path.name} Kind must equal DAG kind {task['kind']}.")
-    if values.get("Verification Mode") not in ALLOWED_VERIFICATION_MODES:
+    mode = values.get("Verification Mode", "").strip("` ")
+    if mode not in ALLOWED_VERIFICATION_MODES:
         errors.append(f"{path.name} has an invalid Verification Mode.")
 
     prerequisites = values.get("Prerequisite Tasks", "")
@@ -597,8 +617,12 @@ def command_sync_ledger(args: argparse.Namespace) -> int:
         task_id = task["id"]
         if task_id in existing_tasks:
             current = existing_tasks[task_id]
-            if current.get("module") != task["module"] or set(current.get("dependencies", [])) != set(task["dependencies"]):
-                _fail(f"DAG ownership or dependencies changed for active task {task_id}; review state before syncing.")
+            if (
+                current.get("module") != task["module"]
+                or current.get("kind") != task["kind"]
+                or set(current.get("dependencies", [])) != set(task["dependencies"])
+            ):
+                _fail(f"DAG module, kind, or dependencies changed for active task {task_id}; review state before syncing.")
             tasks[task_id] = current
         else:
             status = "READY_TO_DISPATCH" if not task["dependencies"] else "BLOCKED"
@@ -632,8 +656,23 @@ def _ready_task_ids(dag: dict, rows: dict[str, LedgerRow]) -> list[str]:
 
 
 def _ready_state_task_ids(dag: dict, state: dict) -> list[str]:
+    _assert_dag_matches_state(dag, state)
     rows = _state_rows(state)
     return _ready_task_ids(dag, rows)
+
+
+def _assert_dag_matches_state(dag: dict, state: dict) -> None:
+    dag_tasks = {
+        task["id"]: (task["module"], task["kind"], tuple(task["dependencies"]))
+        for task in dag["tasks"]
+    }
+    state_tasks = state.get("tasks", {})
+    state_contracts = {
+        task_id: (task.get("module"), task.get("kind"), tuple(task.get("dependencies", [])))
+        for task_id, task in state_tasks.items()
+    }
+    if dag_tasks != state_contracts:
+        _fail("DAG task modules/kinds/dependencies differ from execution state; review the plan and reconcile it before proceeding.")
 
 
 def command_status(args: argparse.Namespace) -> int:
@@ -669,7 +708,10 @@ def _git(repo_root: Path, *arguments: str) -> str:
     )
     if result.returncode != 0:
         _fail(result.stderr.strip() or f"git {' '.join(arguments)} failed.")
-    return result.stdout.strip()
+    # Preserve leading spaces: `git status --porcelain` uses the first two
+    # columns for index/worktree state, and stripping them corrupts the first
+    # path before callers can parse it.
+    return result.stdout.rstrip("\r\n")
 
 
 def _git_head(repo_root: Path) -> str:
@@ -684,11 +726,24 @@ def _has_unmanaged_changes(repo_root: Path, epic_dir: Path) -> bool:
     managed_prefix = epic_dir.relative_to(repo_root).as_posix().rstrip("/") + "/"
     status = _git(repo_root, "status", "--porcelain", "--untracked-files=all")
     for line in status.splitlines():
+        status_code = line[:2]
         path = line[3:].replace("\\", "/")
         paths = [part.strip() for part in path.split(" -> ")]
-        if any(not candidate.startswith(managed_prefix) for candidate in paths):
+        if any(
+            not candidate.startswith(managed_prefix)
+            and not (status_code == "??" and candidate.startswith(".worktrees/"))
+            for candidate in paths
+        ):
             return True
     return False
+
+
+def _worktrees_root(repo_root: Path) -> Path:
+    expected = repo_root.resolve() / ".worktrees"
+    resolved = (repo_root / ".worktrees").resolve()
+    if resolved != expected:
+        _fail(".worktrees root must be a real directory inside the repository, not a redirected link.")
+    return resolved
 
 
 def command_worktree_create(args: argparse.Namespace) -> int:
@@ -710,8 +765,11 @@ def command_worktree_create(args: argparse.Namespace) -> int:
     if not card:
         _fail(f"Missing task card for {args.task_id}.")
     suffix = card.stem.split("-", 1)[1]
-    worktree_path = (repo_root / ".worktrees" / card.stem).resolve()
-    if not str(worktree_path).startswith(str((repo_root / ".worktrees").resolve())):
+    worktrees_root = _worktrees_root(repo_root)
+    worktree_path = (worktrees_root / card.stem).resolve()
+    try:
+        worktree_path.relative_to(worktrees_root)
+    except ValueError:
         _fail("Worktree path resolves outside .worktrees.")
     if worktree_path.exists():
         _fail(f"Worktree already exists: {worktree_path}")
@@ -758,6 +816,7 @@ def _load_mutation(args: argparse.Namespace) -> tuple[Path, dict, dict, dict]:
     state, state_errors = _load_state(epic_dir, args.epic)
     if dag_errors or state_errors:
         _fail("; ".join(dag_errors + state_errors))
+    _assert_dag_matches_state(dag, state)
     task = next((item for item in dag["tasks"] if item["id"] == args.task_id), None)
     if not task:
         _fail(f"Unknown task ID: {args.task_id}")
@@ -774,15 +833,24 @@ def _persist_mutation(epic_dir: Path, dag: dict, state: dict) -> None:
 def command_worker_record(args: argparse.Namespace) -> int:
     epic_dir, dag, state, _ = _load_mutation(args)
     task_state = state["tasks"][args.task_id]
-    if task_state["status"] != "IN_PROGRESS":
-        _fail(f"{args.task_id} must be IN_PROGRESS before recording a worker result.")
+    if task_state["status"] not in {"IN_PROGRESS", "IN_REMEDIATION"}:
+        _fail(f"{args.task_id} must be IN_PROGRESS or IN_REMEDIATION before recording a worker result.")
     if not re.fullmatch(r"[0-9a-fA-F]{7,40}", args.commit):
         _fail("Worker commit must be a hexadecimal Git SHA.")
     task_state["worker_commit"] = args.commit
     task_state["modified_paths"] = args.path
     task_state["verification"] = _evidence_path(epic_dir, args.evidence)
-    required_reviews = ["standards", "spec", "challenger"]
+    required_reviews = [
+        REVIEW_AXIS_ALIASES.get(axis, axis)
+        for axis in task_state.get("required_reviews", [])
+    ]
+    for axis in ("standards", "spec", "challenger"):
+        if axis not in required_reviews:
+            required_reviews.append(axis)
     for axis in args.required_review or []:
+        axis = REVIEW_AXIS_ALIASES.get(axis, axis)
+        if axis not in REVIEW_AXES:
+            _fail(f"Unknown required review axis: {axis}")
         if axis not in required_reviews:
             required_reviews.append(axis)
     task_state["required_reviews"] = required_reviews
@@ -802,16 +870,69 @@ def command_review_record(args: argparse.Namespace) -> int:
     task_state = state["tasks"][args.task_id]
     if task_state["status"] not in {"IN_REVIEW", "IN_REMEDIATION"}:
         _fail(f"{args.task_id} is not accepting review evidence in status {task_state['status']}.")
-    if args.axis not in task_state.get("required_reviews", []):
+    required_reviews = [
+        REVIEW_AXIS_ALIASES.get(axis, axis)
+        for axis in task_state.get("required_reviews", [])
+    ]
+    task_state["required_reviews"] = required_reviews
+    axis = REVIEW_AXIS_ALIASES.get(args.axis, args.axis)
+    if axis not in required_reviews:
         _fail(f"Review axis '{args.axis}' is not required for {args.task_id}.")
-    task_state.setdefault("reviews", {})[args.axis] = {
+    task_state.setdefault("reviews", {})[axis] = {
         "verdict": args.verdict,
         "evidence": _evidence_path(epic_dir, args.evidence),
         "recorded_at": _now(),
     }
-    _record_event(state, "review-recorded", args.task_id, {"axis": args.axis, "verdict": args.verdict})
+    _record_event(state, "review-recorded", args.task_id, {"axis": axis, "verdict": args.verdict})
     _persist_mutation(epic_dir, dag, state)
-    print(f"Recorded {args.axis}={args.verdict} for {args.task_id}.")
+    print(f"Recorded {axis}={args.verdict} for {args.task_id}.")
+    return 0
+
+
+def command_unblock(args: argparse.Namespace) -> int:
+    """Reopen a blocked task after its external blocker is resolved."""
+    epic_dir, dag, state, task = _load_mutation(args)
+    task_state = state["tasks"][args.task_id]
+    if task_state["status"] != "BLOCKED":
+        _fail(f"{args.task_id} must be BLOCKED before it can be unblocked.")
+
+    dependencies = task.get("dependencies", [])
+    incomplete = [
+        dependency for dependency in dependencies
+        if state["tasks"].get(dependency, {}).get("status") != "COMPLETED"
+    ]
+    if incomplete:
+        _fail("Cannot unblock until dependencies are COMPLETED: " + ", ".join(incomplete))
+
+    reviews = task_state.get("reviews", {})
+    failed_reviews = [axis for axis, review in reviews.items() if review.get("verdict") == "FAIL"]
+    if failed_reviews:
+        _fail(
+            "Blocked tasks with failed reviews require a plan revision and a new remediation path; "
+            "failed axes: " + ", ".join(sorted(failed_reviews))
+        )
+    if task_state.get("remediation_count", 0) >= DEFAULT_REMEDIATION_LIMIT:
+        _fail("Remediation limit is exhausted; formally revise and review the plan before reopening this task.")
+    has_completed_review_round = _all_reviews_pass(task_state)
+    has_integration_artifact = bool(task_state.get("integrated_commit"))
+    resumable_after_integration_block = has_integration_artifact and has_completed_review_round
+    if any(task_state.get(key) for key in ("worker_commit", "integrated_commit", "worktree", "branch")) and not resumable_after_integration_block:
+        _fail("This blocked task has prior worker/integration artifacts; reconcile those artifacts before unblocking.")
+
+    reason = args.reason.strip()
+    if not reason:
+        _fail("An unblock reason is required.")
+    evidence = _evidence_path(epic_dir, args.evidence)
+    task_state["status"] = "READY_TO_DISPATCH"
+    task_state["unblock_reason"] = reason
+    task_state["unblock_evidence"] = evidence
+    _record_event(state, "task-unblocked", args.task_id, {
+        "reason": reason,
+        "evidence": evidence,
+        "dependencies": dependencies,
+    })
+    _persist_mutation(epic_dir, dag, state)
+    print(f"Unblocked {args.task_id}; status=READY_TO_DISPATCH.")
     return 0
 
 
@@ -1349,7 +1470,7 @@ def build_parser() -> argparse.ArgumentParser:
     review = subparsers.add_parser("review-record", help="Record one reviewer verdict in PM-owned state.")
     review.add_argument("epic")
     review.add_argument("task_id")
-    review.add_argument("--axis", choices=("standards", "spec", "challenger", "security", "performance", "documentation"), required=True)
+    review.add_argument("--axis", choices=sorted(REVIEW_AXES), required=True)
     review.add_argument("--verdict", choices=("PASS", "FAIL"), required=True)
     review.add_argument("--evidence", required=True)
     review.set_defaults(handler=command_review_record)
@@ -1357,8 +1478,16 @@ def build_parser() -> argparse.ArgumentParser:
     transition.add_argument("epic")
     transition.add_argument("task_id")
     transition.add_argument("--to", required=True, choices=sorted(ALLOWED_STATUSES))
-    transition.add_argument("--remediation-limit", type=int, default=2)
+    transition.add_argument("--remediation-limit", type=int, default=DEFAULT_REMEDIATION_LIMIT)
     transition.set_defaults(handler=command_transition)
+    unblock = subparsers.add_parser(
+        "unblock", help="Reopen a blocked task after recording blocker-resolution evidence."
+    )
+    unblock.add_argument("epic")
+    unblock.add_argument("task_id")
+    unblock.add_argument("--reason", required=True, help="Why the blocker is resolved and the task may resume.")
+    unblock.add_argument("--evidence", required=True, help="Evidence path stored inside the epic workspace.")
+    unblock.set_defaults(handler=command_unblock)
     integration = subparsers.add_parser("integration-record", help="Record a manually integrated commit.")
     integration.add_argument("epic")
     integration.add_argument("task_id")

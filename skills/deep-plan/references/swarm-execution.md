@@ -79,9 +79,10 @@ READY_TO_DISPATCH -> IN_PROGRESS -> IN_REVIEW -> INTEGRATING -> VERIFIED -> COMP
 IN_REVIEW -> IN_REMEDIATION -> IN_REVIEW
 IN_PROGRESS -> BLOCKED | FAILED
 IN_REVIEW -> BLOCKED | FAILED
+BLOCKED -> READY_TO_DISPATCH (explicit unblock with resolved-blocker evidence and completed dependencies only)
 ```
 
-Use `CANCELLED` when the user stops the epic. Detect and record deadlocks, invalid DAGs, unavailable required capabilities, and quota exhaustion rather than treating them as completion.
+Use `CANCELLED` when the user stops the epic. Reopening `BLOCKED` tasks requires a PM-recorded reason and evidence inside the epic. Failed-review tasks, tasks with prior worker/integration artifacts, and exhausted remediation remain blocked until a formally revised plan is reviewed. Detect and record deadlocks, invalid DAGs, unavailable required capabilities, and quota exhaustion rather than treating them as completion.
 
 ## Pause and Resume Protocol
 
