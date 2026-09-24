@@ -11,7 +11,8 @@
 - **Risk Trace:** `02-risk-register.md#[risk-id]` or `N/A`
 - **Kind:** `research` | `implementation` | `migration` | `documentation` | `benchmark` | `configuration`
 - **Verification Mode:** `behavioral-tdd` | `migration` | `static-config` | `documentation` | `benchmark` | `repository-specific`
-- **Prerequisite Tasks:** `[T01]` or `None`
+- **Prerequisite Tasks:** `[T01-task-slug, T02-task-slug]` or `None`
+  *Cite each prerequisite with its slug as well as its ID (e.g. `T11-localvadport`). The slug is the semantic handle: if a later renumber moves the ID, a mismatched slug at the citation site exposes it. Keep the DAG's `dependencies` array ID-only.*
 - **Target Files and Symbols:** `[explicit paths and functions, schemas, or sections]`
 - **Completion Criterion:** `[one observable result]`
 - **Plan-Revision Trigger:** `[evidence that must stop execution and return the card to the PM, or N/A with reason]`

@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added deterministic Deep Plan automation for workspace scaffolding, Tier 3/DAG validation, ledger synchronization, readiness reporting, guarded worktree creation, worker results, reviewer verdicts, and integrated verification.
 - Added focused Python tests covering scaffold validation, DAG cycle rejection, worktree safety, incomplete review fan-in, and the completed task lifecycle.
 - Added `pause` and `resume` commands to the Deep Plan CLI for graceful session handoff with step-level task progress tracking, timestamped handoff dossier generation, worktree reconciliation, and session briefings.
+- **Frozen inter-module contract registry** (`templates/tier1-epic-template.md` §6): each `C-xx` entry names its producer, explicit consumer list, the ID it supersedes, and its verbatim shape. Frozen entries are immutable; amendments file a new ID. Adds an acknowledgement ledger so an unpropagated contract is a visible blocking finding. The PM freezes the registry before dispatching any architect or decomposer.
+- **Semantic handles on cross-module task citations** (`templates/tier3-task-template.md`, `references/tiered-planning.md`, `references/subagents/task-decomposer.md`): prerequisite citations carry the target's slug as well as its ID (`T11-localvadport`), so a later renumber is detectable at the citation site instead of silently plausible. The validator's ID extraction is unchanged.
+- **Parallel-decomposer protocol** (`references/tiered-planning.md`, `references/subagents/task-decomposer.md`): disjoint task-ID ranges, a frozen PM-owned `tasks/ID-LEDGER.md`, a ban on renumbering within a referenced range, and a ban on globbing `tasks/T*.md`.
+- **Four new Phase 4 challenge criteria** (`references/plan-review.md`): cross-module contract agreement, semantic ID drift, test integrity, and silent data loss — plus deletion parity. `plan-review.md` is now the canonical checklist; `plan-challenger.md` points at it instead of restating four of its six rules.
+- **Deletion and migration hygiene** (`references/swarm-execution.md`, `references/subagents/worker-implementer.md`, `SKILL.md`): a dirty tree returns to the PM rather than being stashed or committed around, workers never move the user's uncommitted work, and a parity proof for the replaced behavior is recorded before the delete.
+- Added two Deep Plan CLI tests covering slugged prerequisite citations and confirming a slug cannot mask a genuine DAG mismatch.
 
 ### Changed
 
@@ -28,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- Deep Plan docs now document the `unblock` command (`BLOCKED -> READY_TO_DISPATCH`) in the state table, diagram, and transition rules; it was previously absent from all docs despite being implemented.
+- Corrected `00-tier1-epic.md` to `03-tier1-epic.md` in five files (`templates/tier2-module-template.md` and four subagent role specs); the wrong prefix was uncaught by any validation.
+- Linked `references/resilience-first-development.md` from `SKILL.md` and `plan-review.md`. Nothing in the workflow referenced it, leaving its ~20 chapters unreachable by a Phase 4 reviewer.
 - Updated the Deep Plan Diátaxis documentation suite (`tutorial-deep-plan.md`, `howto-deep-plan.md`, `reference-deep-plan.md`, `explanation-deep-plan.md`) to reflect the hardened five-phase planning lifecycle, isolated worktree execution, multi-axis reviews, and ledger resume protocols.
 
 ## [3.0.0] - 2026-09-19

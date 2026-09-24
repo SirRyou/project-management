@@ -76,17 +76,27 @@ You need to produce clear, contract-ready specifications that workers can implem
    - Define strict, numbered invariants (e.g. `INV-1: Unhashed passwords are never written to disk`).
    - Define explicit in-scope and out-of-scope boundaries to prevent scope creep.
 
-2. **Tier 2 — Architecture Contracts (`modules/M{n}-[name].md`):**
+2. **Freeze the inter-module contract registry and the ID ledger — before any fan-out:**
+   - Complete §6 of `03-tier1-epic.md`: one `C-xx` entry per cross-module contract, each naming its producer, its **explicit consumer list**, the ID it supersedes (or `None`), and the verbatim shape.
+   - A frozen entry is **immutable**. To change a contract, file a **new** `C-xx` that names the ID it supersedes. Never append an amendment to a frozen entry — amendments accumulating against a "frozen" section are the exact failure this registry prevents.
+   - Author `tasks/ID-LEDGER.md` (`T-id → slug → module → assigned range`) and freeze it. Name it `ID-LEDGER.md`, not `T00-*.md`, or the task-card glob will pick it up as a task.
+   - Only then dispatch module architects. An architect fanned out against a moving contract writes against a snapshot that will drift, and the resulting contradictions are invisible to `validate`.
+
+3. **Tier 2 — Architecture Contracts (`modules/M{n}-[name].md`):**
    - Dispatch the **System Architect** subagent for each logical module using [tier2-module-template.md](../skills/deep-plan/templates/tier2-module-template.md).
    - Define interface contracts, TypeScript types, database migration schemas, and sequence diagrams.
    - Specify module-level sad paths and error contracts (`SP-1`, `SP-2`).
+   - Require each module to cite every cross-module contract it consumes by `C-xx` ID, and to **never assert another module's contract state** unless that module's artifact carries the same `C-xx`.
+   - Do not ask a per-module architect to verify cross-module agreement; it cannot see its peers. That check belongs to the PM and the Plan Challenger.
 
-3. **Tier 3 — Atomic Task Cards (`tasks/T{n}-[name].md`):**
+4. **Tier 3 — Atomic Task Cards (`tasks/T{n}-[name].md`):**
    - Dispatch the **Task Decomposer** subagent using [tier3-task-template.md](../skills/deep-plan/templates/tier3-task-template.md).
    - Ensure each task represents **one independently verifiable change**. (File count is a heuristic; contract atomicity is the hard rule).
    - Declare the task kind, prerequisite tasks, exact file paths, ordered implementation steps, failure defenses, declared verification mode, and acceptance criteria.
+   - Cite each cross-module prerequisite with its **slug as well as its ID** (`T11-localvadport`, not `T11`). The slug is a semantic handle: if a renumber later moves the ID, a mismatched slug at the citation site exposes it, where a bare ID stays silently plausible. Keep the DAG's `dependencies` ID-only.
+   - **When fanning out multiple decomposers**, give each a disjoint task-ID range, forbid renumbering within a range another agent may have referenced, and forbid globbing `tasks/T*.md`. Concurrent writers into one `tasks/` directory have deleted each other's cards mid-edit and produced duplicates.
 
-4. **Assemble the Dependency DAG (`dependency-dag.json`):**
+5. **Assemble the Dependency DAG (`dependency-dag.json`):**
    Declare tasks, module ownership, kind, and dependency IDs:
    ```json
    {
@@ -100,7 +110,7 @@ You need to produce clear, contract-ready specifications that workers can implem
    ```
    Validate that the graph is acyclic and all referenced dependencies exist.
 
-5. **Initialize the Progress Ledger:**
+6. **Initialize the Progress Ledger:**
    Copy [progress-ledger-template.md](../skills/deep-plan/templates/progress-ledger-template.md) to `.deep-plan/<epic-slug>/progress-ledger.md`. Populate the task state matrix with all tasks initialized to `READY_TO_DISPATCH` (if 0 dependencies) or `BLOCKED` (if waiting on prerequisites).
 
 ---
@@ -157,6 +167,15 @@ You have completed the draft plan (Tier 1, Tier 2, Tier 3, and DAG) and need to 
 
 3. **Enforce the Gate:**
    Never begin implementation with an unresolved material finding or an unapproved plan.
+
+### The Four Checks That Catch Cross-Module Plan Corruption
+
+These are criteria 10–14 in [plan-review.md](../skills/deep-plan/references/plan-review.md), called out separately because a real epic shipped with all four defects present and `validate` passing:
+
+- **Cross-module contract agreement.** For every `C-xx`, do all listed consumers cite the same ID, and is any **superseded** ID still cited? Compare IDs and acknowledgement cells, not prose. A citation that exists but points at a superseded contract is the defect, and an existence check cannot see it.
+- **Semantic ID drift.** Does every prerequisite citation's slug match its target card's filename stem? `T11-localvadport` resolving to a card named `capabilities-card` means the ID was renumbered after the citation was written. The DAG stays acyclic, resolvable, and wrong.
+- **Test integrity.** Does the test configuration exclude the correct paths? Are stale copies — worktrees, build output — reachable from a repo-wide run? A suite that runs stale code reports green while the real tree is red.
+- **Silent data loss.** Does any design path discard, truncate, or reorder data without emitting a signal? Capped buffers that drop the *oldest* input are the canonical case: the result is committed and plausible, merely missing its beginning.
 
 ---
 

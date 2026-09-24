@@ -7,13 +7,14 @@
 ---
 
 ## 1. Module Responsibility & Boundaries
-- **Parent Epic:** `00-tier1-epic.md`
+- **Parent Epic:** `03-tier1-epic.md`
 - **Module ID:** M{n}
 - **Primary Responsibility:** [Single, clear summary of what this component owns]
 - **Blast Radius / Impacted Files:** [Directories and core files touched]
 - **Downstream Consumers:** [Other modules or external clients consuming this module]
 - **Owned State / Data:** [State, records, resources, or `None`; identify the authoritative owner]
 - **Inputs and Upstream Contracts:** [Named producers and contracts this module consumes]
+- **Consumed Contract IDs:** [Every cross-module contract this module depends on, cited by frozen registry ID from `03-tier1-epic.md` §6 — e.g. `C-01`, `C-04`. Cite the newest ID, never a superseded one. Write `None` if this module consumes no cross-module contract.]
 - **Design Status:** [Repository fact | proposed design | assumption; cite grounding evidence or decision ID]
 
 ---
@@ -26,6 +27,7 @@
 - **Failure results and retry / fallback policy:** [Structured errors, retryability, state after failure]
 - **Compatibility, migration, and rollback:** [Versioning, rollout, or `N/A` with reason]
 - **Observability:** [Logs, metrics, audit events, or `N/A` with reason]
+- **Acknowledgement:** [For each consumed `C-xx`: the registry ID you cite, plus the section of this document that depends on it — e.g. `C-01: §2.1, §3.2 | C-04: §4.1`. If a superseding ID exists, acknowledge the superseding ID. The PM mirrors this into the acknowledgement ledger in `03-tier1-epic.md` §6.]
 
 ### API / Function Signatures
 ```typescript

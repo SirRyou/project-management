@@ -225,6 +225,69 @@ class DeepPlanCliTests(unittest.TestCase):
         }), encoding="utf-8")
         self.assertEqual(self.run_cli("validate", "example-epic"), 1)
 
+    def test_slugged_prerequisite_citations_still_validate(self) -> None:
+        """Task cards may cite prerequisites as `T11-localvadport`.
+
+        The slug is the semantic handle that makes a later renumber detectable
+        at the citation site. The validator must extract the bare ID from the
+        slugged form so the DAG set-equality check is unaffected.
+        """
+        self.assertEqual(self.run_cli("init", "example-epic"), 0)
+        epic = self.root / "example-epic"
+        (epic / "modules" / "M01-core.md").write_text("# Module\n", encoding="utf-8")
+        first = VALID_TASK.replace(
+            "- **Prerequisite Tasks:** None",
+            "- **Prerequisite Tasks:** None",
+        )
+        second = VALID_TASK.replace(
+            "T01: Core",
+            "T02: Dependent",
+        ).replace(
+            "- **Task ID:** T01",
+            "- **Task ID:** T02",
+        ).replace(
+            "- **Prerequisite Tasks:** None",
+            "- **Prerequisite Tasks:** `T01-core`",
+        )
+        (epic / "tasks" / "T01-core.md").write_text(first, encoding="utf-8")
+        (epic / "tasks" / "T02-dependent.md").write_text(second, encoding="utf-8")
+        (epic / "dependency-dag.json").write_text(json.dumps({
+            "epic": "example-epic",
+            "tasks": [
+                {"id": "T01", "module": "M01", "kind": "implementation", "dependencies": []},
+                {"id": "T02", "module": "M01", "kind": "implementation", "dependencies": ["T01"]},
+            ],
+        }), encoding="utf-8")
+        self.assertEqual(self.run_cli("sync-ledger", "example-epic"), 0)
+        self.assertEqual(self.run_cli("validate", "example-epic"), 0)
+
+    def test_slugged_prerequisite_still_fails_on_dag_mismatch(self) -> None:
+        """A slug must not mask a genuine dependency mismatch."""
+        self.assertEqual(self.run_cli("init", "example-epic"), 0)
+        epic = self.root / "example-epic"
+        (epic / "modules" / "M01-core.md").write_text("# Module\n", encoding="utf-8")
+        (epic / "tasks" / "T01-core.md").write_text(VALID_TASK, encoding="utf-8")
+        second = VALID_TASK.replace(
+            "T01: Core",
+            "T02: Dependent",
+        ).replace(
+            "- **Task ID:** T01",
+            "- **Task ID:** T02",
+        ).replace(
+            "- **Prerequisite Tasks:** None",
+            "- **Prerequisite Tasks:** `T01-core`",
+        )
+        (epic / "tasks" / "T02-dependent.md").write_text(second, encoding="utf-8")
+        (epic / "dependency-dag.json").write_text(json.dumps({
+            "epic": "example-epic",
+            "tasks": [
+                {"id": "T01", "module": "M01", "kind": "implementation", "dependencies": []},
+                {"id": "T02", "module": "M01", "kind": "implementation", "dependencies": []},
+            ],
+        }), encoding="utf-8")
+        self.assertEqual(self.run_cli("sync-ledger", "example-epic"), 0)
+        self.assertEqual(self.run_cli("validate", "example-epic"), 1)
+
     def test_worktree_creation_allows_managed_plan_state(self) -> None:
         repository = Path(self.temp_dir.name) / "repo"
         repository.mkdir()

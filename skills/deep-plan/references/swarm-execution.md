@@ -31,6 +31,17 @@ flowchart TD
 4. Never assume unfinished work will provide a future contract.
 5. Parallelize only when dependencies are complete, target ownership is disjoint, and integration risk is explicitly acceptable. Serialize otherwise.
 
+## Deletion and Migration Hygiene
+
+Tasks that delete or replace existing behavior carry a hazard the rest of the DAG does not: they can destroy uncommitted work that was never theirs to commit.
+
+1. **Verify a clean tree before starting.** If the working tree is dirty, **return to the PM**. Do not stash, commit, reset, checkout, or otherwise move the user's work out of the way to clear a path. A worker that resolves a dirty tree itself has silently decided what the user's uncommitted changes mean.
+2. **Never `git add`/`commit`/`reset`/`checkout`/`stash` files you did not author.** The user commits their own work. This is not a style preference — deletion tasks are exactly where a well-intentioned `git checkout .` destroys hours of unreviewed changes.
+3. **Record a parity proof for the replaced behavior before deleting it.** Deletion is only safe once the replacement is integrated and its equivalence is demonstrated. See `resilience-development-book/Pre-Merge-Checklist.md` (Two-Step Deprecation) and `Backward-Compatibility-&-Deprecation.md`.
+4. **Never dispatch a deletion task before its replacement is integrated.** The DAG encodes this; the temptation to "clean up early" is exactly how it gets violated.
+
+The PM should treat a deletion task's clean-tree precondition as a gate, not a formality. A stale dirty tree that is cleared by the wrong actor is data loss, and it will not appear in any test result.
+
 ## Worker Isolation and Dispatch
 
 Create a per-task worktree or branch. Pass the worker:

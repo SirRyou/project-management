@@ -9,7 +9,7 @@ Designs security-specific Tier 2 module specifications when the epic involves au
 - Any Tier 1 invariant references trust boundaries or access control.
 
 ## Inputs
-- `00-tier1-epic.md` (Invariants, Trust Boundaries)
+- `03-tier1-epic.md` (Invariants, Trust Boundaries)
 - Grounding Dossier (existing auth patterns, permission models, secret storage)
 
 ## Rules of Execution

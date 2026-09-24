@@ -8,7 +8,7 @@ Post-implementation verification agent that validates performance tasks meet the
 - Task is tagged `perf` or explicitly mitigates a performance-related failure mode.
 
 ## Inputs
-- `00-tier1-epic.md` (NFR section: latency budgets, throughput targets, memory limits)
+- `03-tier1-epic.md` (NFR section: latency budgets, throughput targets, memory limits)
 - `tasks/T{n}-<name>.md` (Acceptance Criteria with benchmark commands)
 - Performance Engineer's execution report (baseline vs post-optimization measurements)
 - Git diff of the implementation

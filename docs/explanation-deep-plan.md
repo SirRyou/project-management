@@ -72,6 +72,21 @@ flowchart TD
 - **Invariant Traceability:** System invariants (e.g. `INV-1: Unsalted passwords are never written to disk`) are declared once in Tier 1. Tier 2 modules specify the enforcement mechanisms, and Tier 3 tasks link directly to the invariants they protect. If a worker diff threatens `INV-1`, the Adversarial Challenger immediately catches it.
 - **Contract-Ready Atomicity:** Tasks in Tier 3 are defined not by file lines, but by **independently verifiable behavioral changes**. Downstream tasks can rely on the contracts established by upstream tasks because each tier guarantees interface stability.
 
+### Why Tier 1 Also Carries a Frozen Contract Registry
+
+Tier 1 is otherwise the *stable* tier — the one that does not move once written. That is exactly why the cross-module contract registry belongs there, and why it is the only tier where a freeze is meaningful.
+
+The failure it addresses: module architects are fanned out in parallel, each reading the shared planning artifacts. If an inter-module contract is still being decided while that fan-out is in flight, each architect freezes a different snapshot. The resulting contradiction is invisible to `deep_plan.py validate`, which checks that referenced IDs *exist*, never what they *mean*. It surfaces at integration, where it is expensive.
+
+Two properties of the registry do the work, and neither is a citation duty:
+
+- **Immutability with supersession.** A frozen `C-xx` is never edited. A change files a **new** ID that names the one it supersedes. This turns a prose comparison ("does M04's description match M03's?") into an ID comparison ("does M04 cite `C-01` while M03 cites `C-16`?"). The latter is cheap and objective; the former is the expensive manual re-read that the registry exists to eliminate. An amendment log that merely appends to a "frozen" section reproduces the original defect.
+- **Explicit consumer lists with acknowledgement.** "Who must re-check this change?" becomes a finite enumerable set instead of "all modules." An unacknowledged consumer is a visible blocking finding rather than an invisible one.
+
+The same reasoning drives the semantic-handle rule on task citations (`T11-localvadport`, not `T11`). Renumbering preserves referential integrity while destroying meaning: the DAG stays acyclic, resolvable, and wrong. Carrying the slug at the citation site converts detection from a prose re-read of every card into a string comparison.
+
+**The honest limitation:** every one of these rules is agent-enforced. The validator stays shape-only by design, because atomicity and semantic agreement are judgement calls that a regex cannot make. These mechanisms lower the *cost of detection*. They do not make a wrong-but-well-formed plan impossible.
+
 ---
 
 ## 4. Why Plan Review is Separated from Code Review
