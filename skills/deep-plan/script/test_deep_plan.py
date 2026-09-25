@@ -288,6 +288,51 @@ class DeepPlanCliTests(unittest.TestCase):
         self.assertEqual(self.run_cli("sync-ledger", "example-epic"), 0)
         self.assertEqual(self.run_cli("validate", "example-epic"), 1)
 
+    def _edges_epic(self, second_prerequisite: str, second_card_name: str) -> io.StringIO:
+        """Build a two-card epic where T02 cites T01, then run `edges`."""
+        self.assertEqual(self.run_cli("init", "example-epic"), 0)
+        epic = self.root / "example-epic"
+        (epic / "modules" / "M01-core.md").write_text("# Module\n", encoding="utf-8")
+        (epic / "modules" / "M02-other.md").write_text("# Module\n", encoding="utf-8")
+        (epic / "tasks" / "T01-localvadport.md").write_text(VALID_TASK, encoding="utf-8")
+        second = (
+            VALID_TASK.replace("T01: Core", "T02: Dependent")
+            .replace("- **Task ID:** T01", "- **Task ID:** T02")
+            .replace("`modules/M01-core.md`", "`modules/M02-other.md`")
+            .replace("- **Prerequisite Tasks:** None", f"- **Prerequisite Tasks:** `{second_prerequisite}`")
+        )
+        (epic / "tasks" / second_card_name).write_text(second, encoding="utf-8")
+        (epic / "dependency-dag.json").write_text(json.dumps({
+            "epic": "example-epic",
+            "tasks": [
+                {"id": "T01", "module": "M01", "kind": "implementation", "dependencies": []},
+                {"id": "T02", "module": "M02", "kind": "implementation", "dependencies": ["T01"]},
+            ],
+        }), encoding="utf-8")
+        self.assertEqual(self.run_cli("sync-ledger", "example-epic"), 0)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            self.assertEqual(self.run_cli("edges", "example-epic"), 0)
+        return buf
+
+    def test_edges_reports_cross_module_edge_with_handle(self) -> None:
+        output = self._edges_epic("T01-localvadport", "T02-dependent.md").getvalue()
+        self.assertIn("Edges: 1 (1 cross-module, 0 intra-module)", output)
+        self.assertIn("T02-dependent -> T01-localvadport", output)
+        self.assertNotIn("Citation drift", output)
+
+    def test_edges_flags_citation_that_no_longer_matches_target_card(self) -> None:
+        """The G7b signature: a card cites a slug the target card no longer has."""
+        output = self._edges_epic("T01-key-schema-migration", "T02-dependent.md").getvalue()
+        self.assertIn("Citation drift (1)", output)
+        self.assertIn("T02 cites 'T01-key-schema-migration' but T01 is 'T01-localvadport'.", output)
+
+    def test_edges_stays_usable_when_no_card_carries_a_slug(self) -> None:
+        """Legacy plans write bare IDs; the report must still print the edge."""
+        output = self._edges_epic("T01", "T02.md").getvalue()
+        self.assertIn("T02 -> T01-localvadport", output)
+        self.assertNotIn("Citation drift", output)
+
     def test_worktree_creation_allows_managed_plan_state(self) -> None:
         repository = Path(self.temp_dir.name) / "repo"
         repository.mkdir()

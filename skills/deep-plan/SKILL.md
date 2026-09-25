@@ -90,6 +90,7 @@ The deterministic state machine script is located at `<skill-dir>/script/deep_pl
 - Link every tier to the intent dossier, grounding evidence, and relevant risks.
 - Treat a task as atomic when it is one independently verifiable behavioral or contract change. File count is a heuristic, not a hard limit.
 - Run `python "<skill-dir>/script/deep_plan.py" sync-ledger <epic-slug>` after updating the DAG, then run `python "<skill-dir>/script/deep_plan.py" validate <epic-slug>`. Correct structural errors before plan review.
+- Run `python "<skill-dir>/script/deep_plan.py" edges <epic-slug>` and read the cross-module edge list. `validate` checks shape only: a late ID renumbering leaves the DAG acyclic, resolvable, and wrong. The report prints each edge beside its target's semantic handle and flags a citation whose slug no longer matches the target card's filename.
 
 ### Phase 4: Adversarial Plan Review
 

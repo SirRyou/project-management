@@ -36,6 +36,14 @@ python script/deep_plan.py validate <epic-slug>
 
 Full validation checks required artifacts, safe task IDs, task-card/DAG correspondence, declared verification modes and commands, artifact traces, duplicate or unknown dependencies, self-dependencies, cycles, and ledger rows/statuses. It cannot prove that a task is truly atomic or that commands prove behavior; the Plan Challenger still owns that assessment.
 
+Validation is a **shape** check, so read the edges before Phase 4:
+
+```bash
+python script/deep_plan.py edges <epic-slug>
+```
+
+This prints every DAG edge beside its target's semantic handle (the slug from the target card's filename), cross-module edges first. It always exits `0` — it is a review aid, not a gate. Use it to spot a citation that points at an ID renumbered after the citation was written: the DAG stays acyclic and resolvable while the meaning is gone, which `validate` cannot detect. Cards that cite a prerequisite with a slug (`T11-local-vad-port`) get a citation-drift check against the target's filename; bare-ID citations (`[T02, T11]`) are printed but not checked.
+
 ## Phase 5 and Execution: Derive Ready Work
 
 After the plan has passed its review and approval gate, derive work only from the synchronized DAG and ledger:

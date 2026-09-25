@@ -79,4 +79,4 @@ Example:
 
 ## Planning Gate
 
-Before execution, validate all artifact links, task IDs, dependency references, DAG acyclicity, and ledger initialization. In Collaborative Mode, require explicit user approval after the complete plan. In Autonomous Mode, proceed after validation unless a boundary-changing architecture fork requires user synchronization.
+Before execution, validate all artifact links, task IDs, dependency references, DAG acyclicity, and ledger initialization. `validate` is a shape check: run `deep_plan.py edges <epic-slug>` and read the edge list before Phase 4, because a renumbered ID leaves a DAG that is acyclic, resolvable, and wrong. In Collaborative Mode, require explicit user approval after the complete plan. In Autonomous Mode, proceed after validation unless a boundary-changing architecture fork requires user synchronization.

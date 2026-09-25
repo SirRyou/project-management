@@ -13,6 +13,7 @@ Challenge the complete Deep Plan before implementation begins. Find scope gaps, 
 - Tier 2 module specifications.
 - Tier 3 task cards.
 - Dependency DAG and progress ledger.
+- The `deep_plan.py edges <epic-slug>` report, which prints every edge beside its target's semantic handle.
 - Repository workflow and verification commands.
 
 ## Operating Rules

@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Four new Phase 4 challenge criteria** (`references/plan-review.md`): cross-module contract agreement, semantic ID drift, test integrity, and silent data loss — plus deletion parity. `plan-review.md` is now the canonical checklist; `plan-challenger.md` points at it instead of restating four of its six rules.
 - **Deletion and migration hygiene** (`references/swarm-execution.md`, `references/subagents/worker-implementer.md`, `SKILL.md`): a dirty tree returns to the PM rather than being stashed or committed around, workers never move the user's uncommitted work, and a parity proof for the replaced behavior is recorded before the delete.
 - Added two Deep Plan CLI tests covering slugged prerequisite citations and confirming a slug cannot mask a genuine DAG mismatch.
+- **`deep_plan.py edges <epic-slug>`** — prints every DAG edge beside its target's semantic handle (the slug from the target card's filename), cross-module edges first, and reports **citation drift** when a card's cited slug no longer matches the target card's filename. It reads filenames and the `Prerequisite Tasks` field only, infers no meaning, and always exits `0`: a review aid for the manual prose cross-check that caught a late renumber in a real 77-task epic, not a gate. Wired into the Planning Gate, the Phase 4 checklist, the Plan Challenger's inputs, and `automation.md`. Added three CLI tests (cross-module edge with handle, citation drift, bare-ID citations still reported).
 
 ### Changed
 
@@ -38,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected `00-tier1-epic.md` to `03-tier1-epic.md` in five files (`templates/tier2-module-template.md` and four subagent role specs); the wrong prefix was uncaught by any validation.
 - Linked `references/resilience-first-development.md` from `SKILL.md` and `plan-review.md`. Nothing in the workflow referenced it, leaving its ~20 chapters unreachable by a Phase 4 reviewer.
 - Updated the Deep Plan Diátaxis documentation suite (`tutorial-deep-plan.md`, `howto-deep-plan.md`, `reference-deep-plan.md`, `explanation-deep-plan.md`) to reflect the hardened five-phase planning lifecycle, isolated worktree execution, multi-axis reviews, and ledger resume protocols.
+- Documented `edges` in `reference-deep-plan.md` (with its distinction from `validate`'s shape checks), `automation.md`, and `howto-deep-plan.md` (new step 1 of the Phase 4 recipe).
 
 ## [3.0.0] - 2026-09-19
 

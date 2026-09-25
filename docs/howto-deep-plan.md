@@ -155,17 +155,20 @@ During planning or plan challenge, an architectural decision arises that alters 
 You have completed the draft plan (Tier 1, Tier 2, Tier 3, and DAG) and need to stress-test it against blind spots before writing code.
 
 ### Procedure
-1. **Dispatch the Plan Challenger:**
-   Invoke the **Plan Challenger** subagent using the `plan-challenge` contract. Supply the full planning bundle:
-   - `00-intent.md`, `01-grounding.md`, `02-risk-register.md`, `03-tier1-epic.md`, all `modules/`, all `tasks/`, and `dependency-dag.json`.
+1. **Inspect the edges first:**
+   Run `python "<skill-dir>/script/deep_plan.py" edges <epic-slug>` and read the cross-module list. It prints every edge beside its target's semantic handle, so a citation pointing at a renumbered ID is visible in one screen. It is a report, not a gate — it always exits `0`.
 
-2. **Evaluate the Verdict:**
+2. **Dispatch the Plan Challenger:**
+   Invoke the **Plan Challenger** subagent using the `plan-challenge` contract. Supply the full planning bundle:
+   - `00-intent.md`, `01-grounding.md`, `02-risk-register.md`, `03-tier1-epic.md`, all `modules/`, all `tasks/`, the `edges` report, and `dependency-dag.json`.
+
+3. **Evaluate the Verdict:**
    The Challenger returns one of three verdicts:
    - **`PASS`:** All invariants are verifiable, dependencies are sound, and risks are mitigated. Proceed to Phase 5.
    - **`REVISE`:** Concrete findings identified (e.g. missing error handling, unverified invariant, circular dependency). The PM must update the affected task or module cards and re-run the challenge.
    - **`USER_DECISION_REQUIRED`:** A boundary-changing fork was uncovered. Follow [Recipe 4](#4-how-to-handle-architecture-forks-and-user-decisions).
 
-3. **Enforce the Gate:**
+4. **Enforce the Gate:**
    Never begin implementation with an unresolved material finding or an unapproved plan.
 
 ### The Four Checks That Catch Cross-Module Plan Corruption
@@ -173,7 +176,7 @@ You have completed the draft plan (Tier 1, Tier 2, Tier 3, and DAG) and need to 
 These are criteria 10–14 in [plan-review.md](../skills/deep-plan/references/plan-review.md), called out separately because a real epic shipped with all four defects present and `validate` passing:
 
 - **Cross-module contract agreement.** For every `C-xx`, do all listed consumers cite the same ID, and is any **superseded** ID still cited? Compare IDs and acknowledgement cells, not prose. A citation that exists but points at a superseded contract is the defect, and an existence check cannot see it.
-- **Semantic ID drift.** Does every prerequisite citation's slug match its target card's filename stem? `T11-localvadport` resolving to a card named `capabilities-card` means the ID was renumbered after the citation was written. The DAG stays acyclic, resolvable, and wrong.
+- **Semantic ID drift.** Does every prerequisite citation's slug match its target card's filename stem? `T11-localvadport` resolving to a card named `capabilities-card` means the ID was renumbered after the citation was written. The DAG stays acyclic, resolvable, and wrong. `deep_plan.py edges` reports this as citation drift; bare-ID citations are printed but not checked.
 - **Test integrity.** Does the test configuration exclude the correct paths? Are stale copies — worktrees, build output — reachable from a repo-wide run? A suite that runs stale code reports green while the real tree is red.
 - **Silent data loss.** Does any design path discard, truncate, or reorder data without emitting a signal? Capped buffers that drop the *oldest* input are the canonical case: the result is committed and plausible, merely missing its beginning.
 

@@ -229,6 +229,29 @@ The dependency DAG defines execution order and artifact prerequisites.
 3. **No Self-Dependencies:** A task must not depend on itself.
 4. **Research Traceability:** Any task with `kind: "research"` must include a valid `research_id`.
 
+These invariants are all **shape** checks. An ID that exists is not an ID that still means what its dependents assumed: a late renumbering preserves referential integrity while destroying meaning, leaving the DAG acyclic, resolvable, and wrong. `validate` cannot see that, so inspect the edges directly.
+
+### Inspecting Edges (`edges`)
+
+```bash
+python "<skill-dir>/script/deep_plan.py" edges <epic-slug>
+```
+
+Prints every DAG edge beside its target's **semantic handle** — the slug from the target card's filename — with cross-module edges listed first:
+
+```text
+Epic: voice-session-strategies
+Edges: 297 (155 cross-module, 142 intra-module)
+
+Cross-module
+  T25-silero-scoped-observation-port -> T11-local-vad-port
+  T26-silero-utterance-ceiling-observation -> T11-local-vad-port
+```
+
+The report is a **review aid, not a gate**: it always exits `0`, reads only filenames and the `Prerequisite Tasks` field, and infers no meaning. Its job is to make a contradiction visible in one screen instead of a prose re-read of every card. A card that cites a prerequisite with a slug (`T11-local-vad-port`) is additionally checked against the target card's filename stem; a mismatch is reported as **citation drift**, which is the signature of an ID renumbered after the citation was written.
+
+Bare-ID citations (`[T02, T11]`) remain valid and simply produce no drift check — the edge and its handle are still printed. Keep the DAG's `dependencies` array ID-only; slugs belong in cards, not in the schema.
+
 ---
 
 ## 8. Swarm Execution State and Ledger Projection
