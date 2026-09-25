@@ -47,6 +47,18 @@ python script/deep_plan.py ready <epic-slug>
 
 `ready` returns only tasks already marked `READY_TO_DISPATCH` whose dependencies are all `COMPLETED`. It does not promote `BLOCKED` tasks or silently resolve review and integration gates.
 
+### Reopen a Blocked Task
+
+When an external blocker is resolved, the PM may explicitly reopen a clean blocked task:
+
+```bash
+python script/deep_plan.py unblock <epic-slug> <task-id> \
+  --reason "The required provider contract is approved." \
+  --evidence evidence/provider-contract.md
+```
+
+The command requires a non-empty reason, evidence inside the epic, and completed dependencies. It returns the task to `READY_TO_DISPATCH` and records an audit event. It rejects failed-review tasks, tasks with prior worker/integration artifacts, and tasks at the remediation limit. Those cases require a formally revised and reviewed plan before reopening.
+
 ## PM-Owned State Mutations
 
 Run all mutation commands from the parent PM checkout. They append an event, increment `state_revision`, atomically replace `execution-state.json`, and regenerate the ledger projection.
@@ -59,6 +71,8 @@ python script/deep_plan.py worker-record <epic-slug> <task-id> \
 ```
 
 The task enters `IN_REVIEW` and receives the default review set: `standards`, `spec`, and `challenger`. Add risk-specific axes with repeated `--required-review security` or `--required-review performance`.
+
+After a failed review, transition to `IN_REMEDIATION` and record the follow-up worker commit with `worker-record`; the command accepts that status, clears old verdicts, preserves all required axes, keeps the remediation count, and returns the task to `IN_REVIEW`.
 
 Record each reviewer independently:
 

@@ -7,7 +7,7 @@ Adversarially challenges the Worker's implementation to uncover hidden failure m
 "Assume hostile inputs. Assume production network latency. Assume race conditions. What breaks when this runs under stress?"
 
 ## Inputs
-1. `00-tier1-epic.md` (System Invariants)
+1. `03-tier1-epic.md` (System Invariants)
 2. `tasks/T{n}-<name>.md` (Sad Paths & Failure Defenses)
 3. Git diff of the Worker's commit (`git show <commit_sha>`)
 4. Test files and implementation code.

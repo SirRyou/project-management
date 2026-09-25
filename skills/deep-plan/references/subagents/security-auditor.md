@@ -9,7 +9,7 @@ Post-implementation verification agent that reviews Worker diffs specifically fo
 - Any task touches authentication, authorization, session management, or secret handling code.
 
 ## Inputs
-- `00-tier1-epic.md` (System Invariants, Trust Boundaries)
+- `03-tier1-epic.md` (System Invariants, Trust Boundaries)
 - `tasks/T{n}-<name>.md` (Sad Paths, Defense Contracts)
 - Git diff of the Worker's commit
 - Relevant Tier 2 module spec (Permission Matrix, Threat Model)

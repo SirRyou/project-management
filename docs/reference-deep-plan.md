@@ -25,13 +25,14 @@ All planning and execution artifacts reside in a dedicated directory per epic:
 ├── 00-intent.md                  # Phase 1: Problem statement, goals, invariants, autonomy mode
 ├── 01-grounding.md               # Phase 2: Codebase stack, file map, blast radius, test harnesses
 ├── 02-risk-register.md           # Phase 2: Technical risks, impact/uncertainty, mitigations
-├── 03-tier1-epic.md              # Phase 3: Scope boundaries, invariants, NFRs, module map
+├── 03-tier1-epic.md              # Phase 3: Scope boundaries, invariants, NFRs, module map, frozen contract registry
 ├── modules/                      # Phase 3: Tier 2 architectural module contracts
 │   ├── M01-[module-name].md
 │   └── M02-[module-name].md
 ├── tasks/                        # Phase 3: Tier 3 atomic task cards
 │   ├── T01-[task-name].md
-│   └── T02-[task-name].md
+│   ├── T02-[task-name].md
+│   └── ID-LEDGER.md              # Phase 3: PM-owned frozen T-id → slug → module → range map
 ├── dependency-dag.json           # Phase 3: Machine-readable acyclic task dependency graph
 ├── execution-state.json          # Phase 3-5: PM-owned canonical execution state
 └── progress-ledger.md             # Phase 3-5: Generated human-readable state projection
@@ -44,9 +45,10 @@ All planning and execution artifacts reside in a dedicated directory per epic:
 | `00-intent.md` | PM / Orchestrator | Phase 1 | Captures user requirements, candidate invariants, autonomy mode, and boundary decisions. |
 | `01-grounding.md` | Codebase Explorer / PM | Phase 2 | Records verified repository facts, file maps, conventions, and coverage gaps. |
 | `02-risk-register.md` | PM / Orchestrator | Phase 2 | Enumerates failure modes and risks with impact/uncertainty rankings before architecture design. |
-| `03-tier1-epic.md` | PM / Orchestrator | Phase 3 | System invariants, non-functional requirements, and overall scope boundaries. |
+| `03-tier1-epic.md` | PM / Orchestrator | Phase 3 | System invariants, non-functional requirements, overall scope boundaries, and §6 the frozen inter-module contract registry (`C-xx`). |
 | `modules/M{n}-*.md` | System / Security Architect | Phase 3 | Module interface contracts, schemas, interaction diagrams, and child task lists. |
 | `tasks/T{n}-*.md` | Task Decomposer | Phase 3 | Atomic task directives, file targets, failure defenses, and verification commands. |
+| `tasks/ID-LEDGER.md` | PM / Orchestrator | Phase 3 | Frozen `T-id → slug → module → assigned range` map. Authored before fanning out multiple decomposers. |
 | `dependency-dag.json` | Task Decomposer | Phase 3 | Machine-readable dependency graph defining prerequisite execution ordering. |
 | `execution-state.json` | PM / Orchestrator | Phase 3–5 | Canonical task states, review verdicts, commit hashes, events, and resume checkpoints. |
 | `progress-ledger.md` | PM / Orchestrator | Phase 3–5 | Generated human-readable projection; do not edit independently. |
@@ -95,7 +97,7 @@ flowchart TD
 - **Inputs:** Full planning artifact bundle (`00` through `tasks/`, `dependency-dag.json`).
 - **Operations:**
   - Dispatch Plan Challenger under invocation contract `plan-challenge`.
-  - Stress-test against 9 challenge criteria: scope drift, inferred invariants, architectural boundaries, unmitigated risks, circular dependencies, task atomicity, verification command feasibility, external library assumptions, and security/rollback gaps.
+  - Stress-test against the 14 challenge criteria in [plan-review.md](../skills/deep-plan/references/plan-review.md): scope drift; inferred invariants; architectural boundaries; unmitigated risks; circular dependencies; task atomicity; verification command feasibility; external library assumptions; security/rollback gaps; cross-module contract agreement; semantic ID drift; test integrity; silent data loss; and deletion parity.
   - Evaluate verdict (`PASS`, `REVISE`, or `USER_DECISION_REQUIRED`).
   - Pause for user synchronization if a boundary-changing fork is detected.
 
@@ -252,6 +254,8 @@ FAILED              # Remediation limit exceeded or fatal test failure
 CANCELLED           # Task aborted by user or epic cancellation
 ```
 
+`BLOCKED` is not terminal. A clean blocked task — one with no failed review, no prior worker or integration artifact, and remediation remaining — may be reopened to `READY_TO_DISPATCH` via `unblock` once its dependencies are `COMPLETED` and the PM has recorded blocker-resolution evidence inside the epic. See [automation.md](../skills/deep-plan/references/automation.md).
+
 ### State Transition Diagram
 
 ```mermaid
@@ -267,6 +271,7 @@ stateDiagram-v2
     IN_REMEDIATION --> IN_REVIEW: Remediation commit submitted
     INTEGRATING --> VERIFIED: Parent tree integration tests pass
     VERIFIED --> COMPLETED: Evidence recorded; dependents unlocked
+    BLOCKED --> READY_TO_DISPATCH: Explicit unblock; blocker evidence recorded and dependencies COMPLETED
     COMPLETED --> [*]
 ```
 
@@ -274,6 +279,7 @@ stateDiagram-v2
 - A task may transition to `READY_TO_DISPATCH` only when **all** prerequisite tasks in `dependency-dag.json` are in state `COMPLETED`.
 - A task may transition from `IN_REVIEW` to `INTEGRATING` only when **all** assigned reviewers return `PASS`.
 - A task transitions to `COMPLETED` only after integration into the parent branch and passing integrated-tree verification.
+- A `BLOCKED` task may return to `READY_TO_DISPATCH` only through the explicit `unblock` command, with a recorded reason and blocker-resolution evidence stored inside the epic. Tasks with a failed review, prior worker or integration artifacts, or an exhausted remediation count are rejected — those require a formally revised and reviewed plan.
 
 ---
 

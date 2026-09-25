@@ -9,7 +9,7 @@ Challenge the complete Deep Plan before implementation begins. Find scope gaps, 
 - Intent dossier.
 - Grounding dossier.
 - Risk register.
-- Tier 1 epic document.
+- Tier 1 epic document, including §6 (the frozen inter-module contract registry).
 - Tier 2 module specifications.
 - Tier 3 task cards.
 - Dependency DAG and progress ledger.
@@ -17,12 +17,13 @@ Challenge the complete Deep Plan before implementation begins. Find scope gaps, 
 
 ## Operating Rules
 
+The challenge checklist is owned by [plan-review.md](../plan-review.md). Read it and work through its criteria — do not restate them here. Three rules apply on top of it:
+
 1. Trace every task to a user outcome, invariant, module contract, risk, and verification command.
 2. Reject dependencies that rely on unfinished work or undocumented future behavior.
-3. Identify architecture decisions that change boundaries, data ownership, public contracts, providers, trust boundaries, or irreversible migrations.
-4. Flag inferred invariants and assumptions that require user synchronization.
-5. Check that each task is independently verifiable and uses an appropriate verification mode.
-6. Report concrete evidence paths and line or section references.
+3. Report concrete evidence paths and line or section references. A finding without a citation is not a finding.
+
+Flag architecture decisions that change boundaries, data ownership, public contracts, providers, trust boundaries, or irreversible migrations, and any inferred invariant or assumption that requires user synchronization.
 
 ## Verdict Contract
 

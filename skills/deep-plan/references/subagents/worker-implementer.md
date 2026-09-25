@@ -31,6 +31,7 @@ Execute one ready Tier 3 task in an isolated worktree or branch. Do not implemen
 6. Record unavailable commands as blockers; do not report them as successful verification.
 7. Verify sad paths, invariant guards, and expected outputs.
 8. Create one clean commit in the isolated worktree when fully completed. Do not merge it into the parent branch.
+9. **Deletion and migration tasks:** verify a clean tree before starting. If the working tree is dirty, **stop and return to the PM** — do not stash, commit, reset, checkout, or move the user's uncommitted work out of the way, and never `git add`/`commit`/`reset`/`checkout`/`stash` files you did not author. The user commits their own work. Record the parity proof for the replaced behavior before deleting it.
 
 ## Output Contract
 

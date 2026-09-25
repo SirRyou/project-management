@@ -83,14 +83,17 @@ The deterministic state machine script is located at `<skill-dir>/script/deep_pl
   - Tier 2 modules: `.deep-plan/<epic-slug>/modules/`
   - Tier 3 task cards: `.deep-plan/<epic-slug>/tasks/`
   - Dependency DAG: `.deep-plan/<epic-slug>/dependency-dag.json`
+  - ID ledger: `.deep-plan/<epic-slug>/tasks/ID-LEDGER.md`
+- **Freeze the inter-module contract registry (§6 of `03-tier1-epic.md`) and the ID ledger before dispatching any architect or task decomposer.** A module architect fanned out against a moving contract writes against a snapshot that will drift; the resulting contradictions are invisible to `validate` and surface only at integration. The PM owns both artifacts; neither is authored by a subagent.
 - Generate Tier 1 scope and invariants, Tier 2 architecture contracts, Tier 3 atomic tasks, `dependency-dag.json`, and `progress-ledger.md`.
+- When fanning out more than one Task Decomposer, give each a **disjoint task-ID range** and forbid renumbering within a range another agent may have referenced. Never let a decomposer glob `tasks/T*.md`.
 - Link every tier to the intent dossier, grounding evidence, and relevant risks.
 - Treat a task as atomic when it is one independently verifiable behavioral or contract change. File count is a heuristic, not a hard limit.
 - Run `python "<skill-dir>/script/deep_plan.py" sync-ledger <epic-slug>` after updating the DAG, then run `python "<skill-dir>/script/deep_plan.py" validate <epic-slug>`. Correct structural errors before plan review.
 
 ### Phase 4: Adversarial Plan Review
 
-- Read [plan-review.md](references/plan-review.md).
+- Read [plan-review.md](references/plan-review.md) — it owns the canonical challenge checklist. The Plan Challenger may also consult [resilience-first-development.md](references/resilience-first-development.md) for resilience-specific criteria.
 - Dispatch the Plan Challenger against scope, assumptions, architecture, risks, dependency readiness, acceptance criteria, and verification feasibility.
 - When a boundary-changing architecture fork is found, pause and use the question tool to synchronize the decision with the user. Present a recommendation and concrete tradeoffs.
 
@@ -106,12 +109,14 @@ The deterministic state machine script is located at `<skill-dir>/script/deep_pl
 - Read [agent-catalog.md](references/agent-catalog.md) for role routing, [invocation-contracts.md](references/invocation-contracts.md) for child prompts, and [codex-multi-agent.md](references/codex-multi-agent.md) when the active runtime is Codex.
 - Read [automation.md](references/automation.md) when scaffolding a workspace, validating a plan, selecting ready tasks, or provisioning a worker worktree.
 - Begin every dispatch loop with `python "<skill-dir>/script/deep_plan.py" status <epic-slug>` and `python "<skill-dir>/script/deep_plan.py" ready <epic-slug>`. Create a worker worktree only with `python "<skill-dir>/script/deep_plan.py" worktree-create <epic-slug> <task-id> --parent <parent-ref>` from a clean parent checkout.
-- Record worker summaries with `worker-record`, reviewer verdicts with `review-record`, and integration evidence with `integration-record` / `verify-record`. Use `transition` only from the parent PM checkout; never let a child agent edit execution state directly.
+- Record worker summaries with `worker-record` from `IN_PROGRESS` or `IN_REMEDIATION`; recording a remediation result clears the prior review round and returns the task to `IN_REVIEW`. Record reviewer verdicts with `review-record` and integration evidence with `integration-record` / `verify-record`. Use `transition` only from the parent PM checkout; never let a child agent edit execution state directly.
+- Reopen a `BLOCKED` task only through `unblock <epic> <task-id> --reason ... --evidence ...` after its dependencies are completed and blocker-resolution evidence is stored inside the epic. Tasks with failed reviews, prior worker/integration artifacts, or exhausted remediation remain blocked until a formally revised plan is reviewed.
 - Dispatch only tasks whose artifact and contract dependencies are completed and integrated.
 - Use per-task worktrees or branches. Parallelize conservatively only when target ownership and integration risk are acceptable.
 - Select verification from the task-declared mode. Apply TDD to code tasks; follow repository conventions for documentation and other non-code tasks.
 - For code changes, require Code Auditor and Adversarial Challenger review. Add security or performance reviewers from the risk-and-task matrix.
 - Integrate approved commits into the parent branch, run verification on the integrated tree, and only then unlock dependents.
+- For deletion or migration tasks, require a clean tree and a recorded parity proof for the replaced behavior before the delete. Workers must never `git add`/`commit`/`reset`/`checkout`/`stash` the user's own work; they return to the PM if the tree is dirty. See [swarm-execution.md](references/swarm-execution.md).
 - Maintain the ledger state machine and bounded remediation policy. When intentionally pausing, enforce worktree hygiene (ensure active workers commit WIP changes to prevent data loss), then execute `python "<skill-dir>/script/deep_plan.py" pause <epic-slug> --reason <reason>` with repeatable `--task-progress <task-id>:<completed-step>:<total-steps>` for every in-flight task. On session start, execute `python "<skill-dir>/script/deep_plan.py" resume <epic-slug>` for worktree reconciliation and session briefing. Resume from the ledger, DAG, plan artifacts, commit records, and handoff summary after quota exhaustion or session loss.
 - Run Documentation Writer after implementation when public APIs, configuration, migrations, or breaking changes require documentation.
 

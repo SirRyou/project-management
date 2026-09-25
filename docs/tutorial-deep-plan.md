@@ -199,7 +199,15 @@ The agent creates `.deep-plan/api-key-auth/03-tier1-epic.md` using [tier1-epic-t
 
 ## 3. Module Topology
 `M01-data-model` -> `M02-auth-core` -> `M03-rate-limiter` -> `M04-key-routes`
+
+## 6. Inter-Module Contracts (Frozen)
+| Contract ID | Contract | Producer | Consumers | Supersedes | Verbatim Shape |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | Validated key identity | M02 | M03, M04 | `None` | `type KeyIdentity = { keyId: string; tier: 'free'\|'pro' }` |
+| **C-02** | Rate-limit decision | M03 | M04 | `None` | `type RateDecision = { allowed: boolean; retryAfterMs?: number }` |
 ```
+
+The contract registry is completed and frozen **before** the module architects are dispatched. `M03` and `M04` consume `C-01`; `M04` consumes `C-02`. Each consumer cites the ID in its own module spec, and the PM mirrors those citations into the acknowledgement ledger. If `M02` later needs to change `KeyIdentity`, it does not edit `C-01` — it files `C-03` naming `C-01` as superseded, and every consumer must re-cite.
 
 ### Tier 2: Module Architecture Contracts
 
