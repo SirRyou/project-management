@@ -29,6 +29,7 @@ TASK_ID_RE = re.compile(r"^T[0-9]{2,}$")
 MODULE_ID_RE = re.compile(r"^M[0-9]{2,}$")
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
 TASK_FILE_RE = re.compile(r"^(T[0-9]{2,})(?:-[a-z0-9][a-z0-9-]*)?\.md$")
+SLUGGED_CITATION_RE = re.compile(r"T[0-9]{2,}(?:-[a-z0-9]+)*")
 ALLOWED_KINDS = {
     "implementation",
     "migration",
@@ -699,6 +700,90 @@ def command_ready(args: argparse.Namespace) -> int:
         return _report_validation(dag_errors + state_errors)
     for task_id in _ready_state_task_ids(dag, state):
         print(task_id)
+    return 0
+
+
+def _card_handles(epic_dir: Path) -> dict[str, str]:
+    """Map each task ID to the slug carried by its card filename."""
+    handles: dict[str, str] = {}
+    for task_id, path in _task_cards(epic_dir).items():
+        handles[task_id] = path.stem[len(task_id):].lstrip("-")
+    return handles
+
+
+def _cited_handles(text: str) -> dict[str, str]:
+    """Map each cited task ID to the slug written at the citation site."""
+    value = _field(text, "Prerequisite Tasks") or ""
+    cited: dict[str, str] = {}
+    for match in SLUGGED_CITATION_RE.finditer(value):
+        task_id, separator, slug = match.group(0).partition("-")
+        if separator and slug:
+            cited[task_id] = slug
+    return cited
+
+
+def _normalize_handle(value: str) -> str:
+    """Compare handles on their letters and digits, ignoring separator style."""
+    return re.sub(r"[^a-z0-9]", "", value.lower())
+
+
+def _handled(task_id: str, handles: dict[str, str]) -> str:
+    """Render a task as `T11-localvadport`, or bare `T11` when it has no slug."""
+    handle = handles.get(task_id, "")
+    return f"{task_id}-{handle}" if handle else task_id
+
+
+def command_edges(args: argparse.Namespace) -> int:
+    """Print every DAG edge beside the target's semantic handle.
+
+    A report, not a gate: it always exits 0 so it stays usable while a plan is
+    still being authored. A cited slug that no longer matches the target card's
+    filename stem is self-evidently wrong at the citation site, which turns the
+    manual prose cross-check into a string comparison.
+    """
+    epic_dir = _epic_dir(args.root, args.epic)
+    dag, dag_errors = _read_dag(epic_dir, args.epic)
+    if dag_errors:
+        return _report_validation(dag_errors)
+    handles = _card_handles(epic_dir)
+    cards = _task_cards(epic_dir)
+    modules = {task["id"]: task["module"] for task in dag["tasks"]}
+    cross_module: list[str] = []
+    intra_module: list[str] = []
+    drift: list[str] = []
+    for task in sorted(dag["tasks"], key=lambda item: item["id"]):
+        task_id = task["id"]
+        dependencies = sorted(set(task["dependencies"]))
+        if not dependencies:
+            continue
+        text = _read_text(cards[task_id], []) if task_id in cards else ""
+        cited = _cited_handles(text)
+        for dependency in dependencies:
+            line = f"  {_handled(task_id, handles)} -> {_handled(dependency, handles)}"
+            if modules.get(dependency) == task["module"]:
+                intra_module.append(line)
+            else:
+                cross_module.append(line)
+            cited_handle = cited.get(dependency)
+            target_handle = handles.get(dependency, "")
+            if cited_handle and _normalize_handle(cited_handle) != _normalize_handle(target_handle):
+                drift.append(
+                    f"  {task_id} cites '{dependency}-{cited_handle}' but "
+                    f"{dependency} is '{_handled(dependency, handles)}'."
+                )
+    total = len(cross_module) + len(intra_module)
+    print(f"Epic: {args.epic}")
+    print(f"Edges: {total} ({len(cross_module)} cross-module, {len(intra_module)} intra-module)")
+    for title, lines in (("Cross-module", cross_module), ("Intra-module", intra_module)):
+        if not lines:
+            continue
+        print(f"\n{title}")
+        for line in lines:
+            print(line)
+    if drift:
+        print(f"\nCitation drift ({len(drift)})")
+        for line in drift:
+            print(line)
     return 0
 
 
@@ -1453,6 +1538,11 @@ def build_parser() -> argparse.ArgumentParser:
     ready = subparsers.add_parser("ready", help="Print dispatchable task IDs.")
     ready.add_argument("epic")
     ready.set_defaults(handler=command_ready)
+    edges = subparsers.add_parser(
+        "edges", help="Report every DAG edge beside its target's semantic handle."
+    )
+    edges.add_argument("epic")
+    edges.set_defaults(handler=command_edges)
     worktree = subparsers.add_parser("worktree-create", help="Create a guarded worker worktree for a ready task.")
     worktree.add_argument("epic")
     worktree.add_argument("task_id")
