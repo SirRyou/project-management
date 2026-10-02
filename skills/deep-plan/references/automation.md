@@ -108,7 +108,23 @@ From the clean parent repository checkout, provision one worktree for a ready ta
 python script/deep_plan.py worktree-create <epic-slug> <task-id> --parent <branch-or-commit>
 ```
 
-The command refuses a dirty parent checkout, an existing task branch or worktree, an unknown/non-ready task, and an unverifiable parent ref. On success it creates `.worktrees/<task-id>-<slug>`, creates a `task/<task-id>-<slug>` branch, and records the worktree with status `IN_PROGRESS` in the ledger.
+`worktree-create` keeps the parent-checkout cleanliness guard by default. Use `--allow-dirty` only when unrelated parent changes are safe to leave out of the worker checkout. Set `--worktree-root <absolute-path>` to place the checkout on another drive; Deep Plan records that path for later resume and removal. Add `--install-deps` to install dependencies from a single recognized JavaScript lockfile using its frozen-lockfile mode. Package-manager lifecycle scripts run as part of installation, so use this option only with a repository whose dependencies you trust.
+
+Remove a task checkout with `worktree-remove <epic-slug> <task-id>` after worker, reviewer, or integration activity has stopped. The command refuses active task states and dirty worktrees, and preserves the branch unless `--delete-branch` is passed; Git still refuses deletion of an unmerged branch. For an interrupted create whose path was not saved to execution state, pass its absolute registered path with `--worktree-path`. Unregistered paths are left untouched for manual inspection. `worktree-prune <epic-slug>` is a dry run for completed tasks. Pass `--apply` to remove eligible clean worktrees, and `--delete-branch` only when merged task branches should also be removed. Cleanup detaches directory links inside the worktree without following or deleting their targets.
+
+After a worker records its commit and the task enters `IN_REVIEW`, pause worker edits. Reviewers inspect the recorded worker commit in that same checkout as read-only. Keep generated review artifacts outside the checkout or in isolated temporary directories. Do not start remediation until the review round has finished.
+
+### Maintaining the Python CLI
+
+From the repository root, install the development tools and run the focused checks with:
+
+```powershell
+uv sync --group dev
+uv run ruff check skills/deep-plan/script
+uv run pytest skills/deep-plan/script/test_deep_plan.py
+```
+
+The command refuses a dirty parent checkout unless `--allow-dirty` is set, and refuses an existing task branch or path rather than overwriting it. On success it creates a `task/<task-id>-<slug>` branch under `.worktrees/` by default (or under `--worktree-root`) and records the worktree with status `IN_PROGRESS` in the ledger.
 
 ## Pause and Resume Protocol
 

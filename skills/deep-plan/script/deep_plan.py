@@ -13,6 +13,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -823,12 +824,246 @@ def _has_unmanaged_changes(repo_root: Path, epic_dir: Path) -> bool:
     return False
 
 
-def _worktrees_root(repo_root: Path) -> Path:
-    expected = repo_root.resolve() / ".worktrees"
-    resolved = (repo_root / ".worktrees").resolve()
-    if resolved != expected:
-        _fail(".worktrees root must be a real directory inside the repository, not a redirected link.")
+def _worktrees_root(repo_root: Path, configured_root: str | None = None) -> Path:
+    repo_root = repo_root.resolve()
+    if configured_root is None:
+        expected = repo_root / ".worktrees"
+        try:
+            resolved = expected.resolve()
+        except OSError as error:
+            _fail(f"Cannot resolve default worktree root {expected}: {error}")
+        if resolved != expected:
+            _fail("Default .worktrees root must be a real directory inside the repository; use --worktree-root to relocate it.")
+        return resolved
+    candidate = Path(configured_root).expanduser()
+    if not candidate.is_absolute():
+        _fail("--worktree-root must be an absolute path so the recorded location is unambiguous.")
+    try:
+        resolved = candidate.resolve()
+    except OSError as error:
+        _fail(f"Cannot resolve worktree root {candidate}: {error}")
+    if resolved == repo_root or repo_root.is_relative_to(resolved) or resolved.is_relative_to(repo_root):
+        _fail("Worktree root must be outside the parent repository to avoid nested checkouts.")
     return resolved
+
+
+def _resolve_worktree_path(repo_root: Path, value: str | None) -> Path | None:
+    if not value:
+        return None
+    path = Path(value).expanduser()
+    return path.resolve() if path.is_absolute() else (repo_root / path).resolve()
+
+
+def _task_worktree_path(repo_root: Path, task_state: dict) -> Path | None:
+    return _resolve_worktree_path(repo_root, task_state.get("worktree"))
+
+
+def _task_branch_name(epic_dir: Path, task_id: str) -> str:
+    card = _task_cards(epic_dir).get(task_id)
+    if not card:
+        _fail(f"Missing task card for {task_id}.")
+    suffix = card.stem[len(task_id):].lstrip("-") or "task"
+    return f"task/{task_id}-{suffix}"
+
+
+def _branch_exists(repo_root: Path, branch: str) -> bool:
+    return subprocess.run(
+        ["git", "-C", str(repo_root), "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
+        check=False,
+    ).returncode == 0
+
+
+def _dependency_install_command(worktree_path: Path) -> list[str] | None:
+    lockfiles = {
+        "pnpm-lock.yaml": ["pnpm", "install", "--frozen-lockfile"],
+        "package-lock.json": ["npm", "ci"],
+        "yarn.lock": ["yarn", "install", "--immutable"],
+        "bun.lockb": ["bun", "install", "--frozen-lockfile"],
+        "bun.lock": ["bun", "install", "--frozen-lockfile"],
+    }
+    present = [command for lockfile, command in lockfiles.items() if (worktree_path / lockfile).is_file()]
+    if len(present) > 1:
+        _fail("Multiple JavaScript lockfiles found; choose one package manager and remove stale lockfiles.")
+    return present[0] if present else None
+
+
+def _run_dependency_install(worktree_path: Path) -> None:
+    command = _dependency_install_command(worktree_path)
+    if command is None:
+        _fail("--install-deps requires a recognized JavaScript lockfile in the worktree.")
+    try:
+        result = subprocess.run(command, cwd=worktree_path, text=True, check=False)
+    except OSError as error:
+        _fail(f"Could not start dependency installer {command[0]}: {error}")
+    if result.returncode != 0:
+        _fail(f"Dependency installation failed ({command[0]} exited {result.returncode}).")
+
+
+def _directory_reparse_point(path: Path) -> bool:
+    try:
+        info = path.lstat()
+    except OSError:
+        return False
+    if stat.S_ISLNK(info.st_mode):
+        return path.is_dir()
+    attributes = getattr(info, "st_file_attributes", 0)
+    reparse_attribute = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    is_junction = getattr(os.path, "isjunction", None)
+    return bool(attributes & reparse_attribute) and (
+        stat.S_ISDIR(info.st_mode) or bool(is_junction and is_junction(path))
+    )
+
+
+def _detach_directory_links(root: Path) -> None:
+    """Detach directory links without traversing or deleting their targets."""
+    links: list[Path] = []
+    pending = [root]
+    while pending:
+        current = pending.pop()
+        try:
+            entries = list(os.scandir(current))
+        except OSError as error:
+            _fail(f"Cannot inspect worktree directory {current}: {error}")
+        for entry in entries:
+            candidate = Path(entry.path)
+            if _directory_reparse_point(candidate):
+                links.append(candidate)
+            elif entry.is_dir(follow_symlinks=False):
+                pending.append(candidate)
+    tracked_links = []
+    for link in links:
+        relative = link.relative_to(root).as_posix()
+        tracked = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", relative],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if tracked.returncode == 0:
+            tracked_links.append(link)
+    if tracked_links:
+        _fail("Refusing automatic cleanup of tracked directory links: " + ", ".join(map(str, tracked_links)))
+    for link in sorted(links, key=lambda item: len(item.parts), reverse=True):
+        try:
+            if link.is_symlink():
+                link.unlink()
+            else:
+                os.rmdir(link)
+        except OSError as error:
+            _fail(f"Could not detach worktree directory link {link}; its target was left untouched: {error}")
+
+
+def _worktree_is_registered(repo_root: Path, worktree_path: Path) -> bool:
+    entries = _git(repo_root, "worktree", "list", "--porcelain").splitlines()
+    expected = os.path.normcase(str(worktree_path.resolve()))
+    return any(
+        line.startswith("worktree ")
+        and os.path.normcase(str(Path(line.removeprefix("worktree ")).resolve())) == expected
+        for line in entries
+    )
+
+
+def _worktree_has_changes(path: Path) -> bool:
+    status = subprocess.run(
+        ["git", "-C", str(path), "status", "--porcelain", "--untracked-files=all", "-z"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if status.returncode != 0:
+        _fail(status.stderr.strip() or f"Could not inspect worktree status at {path}.")
+    for record in status.stdout.split("\0"):
+        if not record:
+            continue
+        status_code, raw_path = record[:2], record[3:]
+        if status_code == "??" and _directory_reparse_point(path / raw_path):
+            continue
+        return True
+    return False
+
+
+def _remove_worktree_path(repo_root: Path, worktree_path: Path) -> bool:
+    """Remove a clean registered worktree; return whether a checkout was removed."""
+    if not worktree_path.exists():
+        _git(repo_root, "worktree", "prune", "--expire", "now")
+        return False
+    if not _worktree_is_registered(repo_root, worktree_path):
+        _fail(f"Path exists but is not a registered Git worktree; leaving it untouched: {worktree_path}")
+    if _worktree_has_changes(worktree_path):
+        _fail(f"Worktree has tracked or untracked changes; commit or preserve them before removal: {worktree_path}")
+    _detach_directory_links(worktree_path)
+    _git(repo_root, "worktree", "remove", str(worktree_path))
+    return True
+
+
+def _remove_task_worktree(
+    repo_root: Path,
+    epic_dir: Path,
+    dag: dict,
+    state: dict,
+    task_id: str,
+    delete_branch: bool,
+    worktree_path_override: str | None = None,
+) -> bool:
+    task_state = state["tasks"][task_id]
+    if task_state.get("status") in {"IN_PROGRESS", "IN_REVIEW", "IN_REMEDIATION", "INTEGRATING"}:
+        _fail(
+            f"Cannot remove the {task_state['status']} worktree for {task_id}; stop worker/reviewer activity and "
+            "move the task to a non-active state first."
+        )
+    worktree_path = _task_worktree_path(repo_root, task_state)
+    if worktree_path_override:
+        override_path = Path(worktree_path_override).expanduser()
+        if not override_path.is_absolute():
+            _fail("--worktree-path must be absolute.")
+        override_path = override_path.resolve()
+        if worktree_path and override_path != worktree_path:
+            _fail(f"--worktree-path does not match the recorded path for {task_id}; leaving both paths untouched.")
+        worktree_path = override_path
+    branch = task_state.get("branch")
+    expected_branch = _task_branch_name(epic_dir, task_id)
+    if branch and branch != expected_branch:
+        _fail(f"Recorded branch for {task_id} does not match its task-card branch name; leaving artifacts untouched.")
+    if worktree_path and worktree_path.exists():
+        if not _worktree_is_registered(repo_root, worktree_path):
+            _fail(f"Path exists but is not a registered Git worktree; leaving it untouched: {worktree_path}")
+        actual_branch = _git(worktree_path, "rev-parse", "--abbrev-ref", "HEAD")
+        if actual_branch != expected_branch:
+            _fail(f"Worktree at {worktree_path} is on {actual_branch}, expected {expected_branch}; leaving it untouched.")
+        if not branch:
+            branch = expected_branch
+            task_state["branch"] = branch
+    elif not branch and (delete_branch or worktree_path_override) and _branch_exists(repo_root, expected_branch):
+        branch = expected_branch
+        task_state["branch"] = branch
+    removed = False
+    if worktree_path:
+        removed = _remove_worktree_path(repo_root, worktree_path)
+        task_state.pop("worktree", None)
+    elif not delete_branch:
+        _fail(f"{task_id} has no recorded worktree; pass --delete-branch to reconcile branch metadata.")
+
+    if delete_branch and branch:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), "branch", "-d", "--", branch],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            if worktree_path and not worktree_path.exists():
+                task_state["branch"] = branch
+                _record_event(state, "worktree-removed-branch-retained", task_id, {"branch": branch})
+                _persist_mutation(epic_dir, dag, state)
+            _fail(result.stderr.strip() or f"Could not safely delete branch {branch}; it may contain unmerged commits.")
+        task_state.pop("branch", None)
+    elif not worktree_path and branch:
+        _fail(f"{task_id} has a branch but no worktree; use --delete-branch to reconcile it safely.")
+
+    task_state.pop("parent_ref", None)
+    _record_event(state, "worktree-removed", task_id, {"branch_deleted": bool(delete_branch and branch)})
+    _persist_mutation(epic_dir, dag, state)
+    return removed
 
 
 def command_worktree_create(args: argparse.Namespace) -> int:
@@ -844,42 +1079,138 @@ def command_worktree_create(args: argparse.Namespace) -> int:
     if args.task_id not in _ready_state_task_ids(dag, state):
         _fail(f"{args.task_id} is not READY_TO_DISPATCH with completed dependencies.")
     repo_root = Path(_git(Path.cwd(), "rev-parse", "--show-toplevel"))
-    if _has_unmanaged_changes(repo_root, epic_dir):
+    if _has_unmanaged_changes(repo_root, epic_dir) and not args.allow_dirty:
         _fail("Parent repository has changes outside this epic's .deep-plan state; commit or stash them before creating a worker worktree.")
     card = _task_cards(epic_dir).get(args.task_id)
     if not card:
         _fail(f"Missing task card for {args.task_id}.")
-    suffix = card.stem.split("-", 1)[1]
-    worktrees_root = _worktrees_root(repo_root)
+    suffix = card.stem[len(args.task_id):].lstrip("-") or "task"
+    worktrees_root = _worktrees_root(repo_root, args.worktree_root)
+    try:
+        worktrees_root.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        _fail(f"Cannot create worktree root {worktrees_root}: {error}")
     worktree_path = (worktrees_root / card.stem).resolve()
     try:
         worktree_path.relative_to(worktrees_root)
     except ValueError:
-        _fail("Worktree path resolves outside .worktrees.")
+        _fail("Worktree path resolves outside the selected worktree root.")
     if worktree_path.exists():
-        _fail(f"Worktree already exists: {worktree_path}")
+        if _worktree_is_registered(repo_root, worktree_path):
+            _fail(
+                f"Worktree already exists: {worktree_path}. Remove or reconcile it first with "
+                f"worktree-remove {args.epic} {args.task_id} --worktree-path {worktree_path}."
+            )
+        _fail(f"Path exists but is not a registered worktree; inspect and move it manually before retrying: {worktree_path}")
     branch = f"task/{args.task_id}-{suffix}"
-    if subprocess.run(["git", "-C", str(repo_root), "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"], check=False).returncode == 0:
-        _fail(f"Branch already exists: {branch}")
+    if _branch_exists(repo_root, branch):
+        _fail(f"Branch already exists: {branch}. Reconcile it with worktree-remove {args.epic} {args.task_id} --delete-branch.")
     _git(repo_root, "rev-parse", "--verify", args.parent)
     _git(repo_root, "worktree", "add", "-b", branch, str(worktree_path), args.parent)
+    if args.install_deps:
+        try:
+            _run_dependency_install(worktree_path)
+        except DeepPlanError:
+            try:
+                _remove_worktree_path(repo_root, worktree_path)
+                _git(repo_root, "branch", "-d", branch)
+            except DeepPlanError as cleanup_error:
+                _fail(f"Dependency setup failed and cleanup also failed: {cleanup_error}. Worktree retained at {worktree_path}.")
+            raise
     task_state = state["tasks"][args.task_id]
-    task_state["worktree"] = str(worktree_path.relative_to(repo_root)).replace("\\", "/")
+    task_state["worktree"] = (
+        str(worktree_path.relative_to(repo_root)).replace("\\", "/")
+        if worktree_path.is_relative_to(repo_root)
+        else str(worktree_path)
+    )
     task_state["branch"] = branch
     task_state["parent_ref"] = args.parent
     task_state["status"] = "IN_PROGRESS"
-    _record_event(state, "worktree-created", args.task_id, {"branch": branch, "parent_ref": args.parent})
-    _save_state(state, epic_dir)
-    _sync_ledger_projection(epic_dir, state, dag)
+    _record_event(state, "worktree-created", args.task_id, {"branch": branch, "parent_ref": args.parent, "path": str(worktree_path)})
+    try:
+        _persist_mutation(epic_dir, dag, state)
+    except (OSError, DeepPlanError) as error:
+        persisted_state, persisted_errors = _load_state(epic_dir, args.epic)
+        persisted_task = persisted_state.get("tasks", {}).get(args.task_id, {})
+        if not persisted_errors and persisted_task.get("worktree") == task_state["worktree"]:
+            _fail(
+                f"Worktree was created and execution state was saved, but ledger synchronization failed: {error}. "
+                f"The checkout remains at {worktree_path}; run sync-ledger {args.epic}."
+            )
+        try:
+            _remove_worktree_path(repo_root, worktree_path)
+            _git(repo_root, "branch", "-d", branch)
+        except DeepPlanError as cleanup_error:
+            _fail(f"Could not persist worktree state ({error}) or clean up the created worktree ({cleanup_error}); it remains at {worktree_path}.")
+        raise
     print(f"Created {worktree_path} on {branch} from {args.parent}.")
     return 0
 
 
+def command_worktree_remove(args: argparse.Namespace) -> int:
+    repo_root = _assert_pm_checkout()
+    epic_dir, dag, state, _ = _load_mutation(args)
+    removed = _remove_task_worktree(
+        repo_root, epic_dir, dag, state, args.task_id, args.delete_branch, args.worktree_path,
+    )
+    if removed:
+        print(f"Removed worktree for {args.task_id}.")
+    else:
+        print(f"Reconciled missing worktree for {args.task_id}.")
+    return 0
+
+
+def command_worktree_prune(args: argparse.Namespace) -> int:
+    repo_root = _assert_pm_checkout()
+    epic_dir = _epic_dir(args.root, args.epic)
+    dag, dag_errors = _read_dag(epic_dir, args.epic)
+    state, state_errors = _load_state(epic_dir, args.epic)
+    if dag_errors or state_errors:
+        return _report_validation(dag_errors + state_errors)
+    _assert_dag_matches_state(dag, state)
+
+    completed = [
+        (task_id, task_state)
+        for task_id, task_state in sorted(state["tasks"].items())
+        if task_state.get("status") == "COMPLETED" and task_state.get("worktree")
+    ]
+    if not completed:
+        print("No completed tasks have recorded worktrees.")
+        return 0
+
+    if not args.apply:
+        print("Dry run; pass --apply to remove eligible worktrees.")
+        for task_id, task_state in completed:
+            path = _task_worktree_path(repo_root, task_state)
+            if path and path.exists() and _worktree_is_registered(repo_root, path):
+                try:
+                    reason = "dirty; skipped" if _worktree_has_changes(path) else "eligible"
+                except DeepPlanError as error:
+                    reason = f"cannot inspect; skipped ({error})"
+            elif path and path.exists():
+                reason = "not a registered worktree; skipped"
+            else:
+                reason = "missing; metadata can be reconciled"
+            print(f"  {task_id}: {path or '(no path)'} — {reason}")
+        return 0
+
+    failures = 0
+    for task_id, _task_state in completed:
+        try:
+            removed = _remove_task_worktree(repo_root, epic_dir, dag, state, task_id, args.delete_branch)
+            print(f"  {task_id}: {'removed' if removed else 'reconciled'}")
+        except DeepPlanError as error:
+            failures += 1
+            print(f"  {task_id}: skipped — {error}", file=sys.stderr)
+    return 1 if failures else 0
+
+
 def _assert_pm_checkout() -> Path:
-    repo_root = Path(_git(Path.cwd(), "rev-parse", "--show-toplevel"))
-    relative = Path.cwd().resolve().relative_to(repo_root).as_posix().split("/")
-    if ".worktrees" in relative:
-        _fail("Execution-state mutations must run from the parent PM checkout, not a worker worktree.")
+    repo_root = Path(_git(Path.cwd(), "rev-parse", "--show-toplevel")).resolve()
+    worktrees = _git(repo_root, "worktree", "list", "--porcelain").splitlines()
+    main_worktree = next((line.removeprefix("worktree ") for line in worktrees if line.startswith("worktree ")), "")
+    if not main_worktree or os.path.normcase(str(repo_root)) != os.path.normcase(str(Path(main_worktree).resolve())):
+        _fail(f"Execution-state mutations must run from the parent PM checkout ({main_worktree or 'not found'}), not a worker worktree.")
     return repo_root
 
 
@@ -1440,7 +1771,7 @@ def command_resume(args: argparse.Namespace) -> int:
         for tid, t in sorted(in_progress.items()):
             worktree = t.get("worktree", "")
             branch = t.get("branch", "")
-            worktree_path = (repo_root / worktree) if worktree else None
+            worktree_path = _resolve_worktree_path(repo_root, worktree)
 
             prog = t.get("step_progress")
             step_info = ""
@@ -1484,6 +1815,8 @@ def command_resume(args: argparse.Namespace) -> int:
             failed = [ax for ax, r in reviews.items() if r.get("verdict") == "FAIL"]
             if pending:
                 print(f"    {tid}: Pending reviews: {', '.join(pending)}")
+                if t.get("worktree"):
+                    print("      -> Review the recorded worker commit in the shared worktree read-only; pause worker edits until review completes.")
             if failed:
                 print(f"    {tid}: Failed reviews: {', '.join(failed)}")
             if not pending and not failed:
@@ -1547,7 +1880,21 @@ def build_parser() -> argparse.ArgumentParser:
     worktree.add_argument("epic")
     worktree.add_argument("task_id")
     worktree.add_argument("--parent", required=True, help="Verified parent branch or commit.")
+    worktree.add_argument("--worktree-root", help="External worktree directory; must be outside the parent repository.")
+    worktree.add_argument("--allow-dirty", action="store_true", help="Allow unrelated changes in the parent checkout.")
+    worktree.add_argument("--install-deps", action="store_true", help="Install dependencies with the detected lockfile's package manager.")
     worktree.set_defaults(handler=command_worktree_create)
+    worktree_remove = subparsers.add_parser("worktree-remove", help="Safely remove a task worktree and reconcile its metadata.")
+    worktree_remove.add_argument("epic")
+    worktree_remove.add_argument("task_id")
+    worktree_remove.add_argument("--worktree-path", help="Absolute registered checkout path, for recovering an interrupted create.")
+    worktree_remove.add_argument("--delete-branch", action="store_true", help="Also delete the task branch if Git considers it safely merged.")
+    worktree_remove.set_defaults(handler=command_worktree_remove)
+    worktree_prune = subparsers.add_parser("worktree-prune", help="List or remove worktrees for completed tasks.")
+    worktree_prune.add_argument("epic")
+    worktree_prune.add_argument("--apply", action="store_true", help="Perform eligible removals; without this flag, only report candidates.")
+    worktree_prune.add_argument("--delete-branch", action="store_true", help="Also delete eligible task branches.")
+    worktree_prune.set_defaults(handler=command_worktree_prune)
     worker = subparsers.add_parser("worker-record", help="Record a worker result in PM-owned state.")
     worker.add_argument("epic")
     worker.add_argument("task_id")

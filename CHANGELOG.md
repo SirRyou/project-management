@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-10-02
+
 ### Added
 
 - Added a five-phase Deep Plan lifecycle with persisted intent, grounding, and risk evidence.
@@ -25,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Deletion and migration hygiene** (`references/swarm-execution.md`, `references/subagents/worker-implementer.md`, `SKILL.md`): a dirty tree returns to the PM rather than being stashed or committed around, workers never move the user's uncommitted work, and a parity proof for the replaced behavior is recorded before the delete.
 - Added two Deep Plan CLI tests covering slugged prerequisite citations and confirming a slug cannot mask a genuine DAG mismatch.
 - **`deep_plan.py edges <epic-slug>`** — prints every DAG edge beside its target's semantic handle (the slug from the target card's filename), cross-module edges first, and reports **citation drift** when a card's cited slug no longer matches the target card's filename. It reads filenames and the `Prerequisite Tasks` field only, infers no meaning, and always exits `0`: a review aid for the manual prose cross-check that caught a late renumber in a real 77-task epic, not a gate. Wired into the Planning Gate, the Phase 4 checklist, the Plan Challenger's inputs, and `automation.md`. Added three CLI tests (cross-module edge with handle, citation drift, bare-ID citations still reported).
+- **Worktree lifecycle management commands**:
+  - `deep_plan.py worktree-remove <epic-slug> <task-id> [--delete-branch] [--worktree-path <path>]`: safely detaches Git worktrees, protects active tasks and dirty checkouts, clears worktree and branch metadata from `execution-state.json` (resolving the unblock deadlock), and recovers orphaned registered checkouts.
+  - `deep_plan.py worktree-prune <epic-slug> [--apply] [--delete-branch]`: dry-run candidate inspection by default, removing clean worktrees for `COMPLETED` tasks when `--apply` is passed.
+- **Configurable external worktree roots** (`worktree-create --worktree-root <absolute-path>`): allows relocating worker checkouts to an external drive or volume (resolving disk space constraints and preventing root test runners from scanning `.worktrees/*`).
+- **Parent checkout cleanliness override** (`worktree-create --allow-dirty`): permits provisioning a worker checkout when parent changes are unrelated.
+- **Automated dependency provisioning** (`worktree-create --install-deps`): detects supported JavaScript lockfiles (`pnpm`, `npm`, `yarn`, `bun`) and runs immutable/frozen installations, rolling back the worktree if setup fails.
+- **Python tooling and test harness**: added `pyproject.toml` with `ruff` and `pytest` configs, with `.test-tmp` test isolation.
 
 ### Changed
 
@@ -32,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Audience adaptation changes visible detail only; planning rigor and evidence requirements remain consistent.
 - Worker and specialist routing now derives from task metadata and the risk register.
 - `progress-ledger.md` is now a generated human-readable projection of the canonical PM execution state; child agents return evidence but do not mutate execution state directly.
+- **Reviewer read-only inspection protocol**: updated `SKILL.md` and `references/automation.md` so reviewers inspect recorded worker commits read-only in the shared worktree while worker edits are paused, eliminating reviewer race conditions.
+- **Hardened parent PM checkout detection**: `_assert_pm_checkout` now verifies against `git worktree list --porcelain` to prevent state mutation commands from running inside worker worktrees.
+
+### Fixed
+
+- **Windows reparse point and junction cleanup safety**: `_detach_directory_links` safely detaches directory links/junctions without traversing or deleting target directories, preventing data loss in shared package manager stores (e.g., pnpm store).
 
 ### Documentation
 

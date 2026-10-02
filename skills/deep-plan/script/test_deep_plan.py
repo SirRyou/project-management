@@ -111,7 +111,9 @@ MULTI_STEP_TASK = """# Tier 3: T01: Core
 
 class DeepPlanCliTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.temp_dir = tempfile.TemporaryDirectory()
+        test_temp_root = Path(__file__).resolve().parents[3] / ".test-tmp"
+        test_temp_root.mkdir(parents=True, exist_ok=True)
+        self.temp_dir = tempfile.TemporaryDirectory(dir=test_temp_root)
         self.root = Path(self.temp_dir.name) / ".deep-plan"
 
     def tearDown(self) -> None:
@@ -119,6 +121,36 @@ class DeepPlanCliTests(unittest.TestCase):
 
     def run_cli(self, *arguments: str) -> int:
         return deep_plan.main(["--root", str(self.root), *arguments])
+
+    def create_git_epic(self) -> tuple[Path, Path, Path, Path]:
+        repository = Path(self.temp_dir.name) / "repo-lifecycle"
+        repository.mkdir()
+        subprocess.run(["git", "init"], cwd=repository, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "deep-plan@example.test"], cwd=repository, check=True)
+        subprocess.run(["git", "config", "user.name", "Deep Plan Test"], cwd=repository, check=True)
+        (repository / ".gitignore").write_text("node_modules/\n", encoding="utf-8")
+        (repository / "README.md").write_text("# Test\n", encoding="utf-8")
+        subprocess.run(["git", "add", "."], cwd=repository, check=True)
+        subprocess.run(["git", "commit", "-m", "initial"], cwd=repository, check=True, capture_output=True)
+        original_root, original_cwd = self.root, Path.cwd()
+        self.root = repository / ".deep-plan"
+        os.chdir(repository)
+        self.assertEqual(self.run_cli("init", "example-epic"), 0)
+        epic = self.root / "example-epic"
+        (epic / "modules" / "M01-core.md").write_text("# Module\n", encoding="utf-8")
+        (epic / "tasks" / "T01-core.md").write_text(VALID_TASK, encoding="utf-8")
+        (epic / "dependency-dag.json").write_text(json.dumps({
+            "epic": "example-epic",
+            "tasks": [{"id": "T01", "module": "M01", "kind": "implementation", "dependencies": []}],
+        }), encoding="utf-8")
+        self.assertEqual(self.run_cli("sync-ledger", "example-epic"), 0)
+        subprocess.run(["git", "add", ".deep-plan"], cwd=repository, check=True)
+        subprocess.run(["git", "commit", "-m", "managed plan baseline"], cwd=repository, check=True, capture_output=True)
+        return repository, epic, original_root, original_cwd
+
+    def restore_git_epic(self, original_root: Path, original_cwd: Path) -> None:
+        os.chdir(original_cwd)
+        self.root = original_root
 
     def test_init_creates_valid_scaffold(self) -> None:
         self.assertEqual(self.run_cli("init", "example-epic"), 0)
@@ -402,6 +434,224 @@ class DeepPlanCliTests(unittest.TestCase):
 
         with self.assertRaises(deep_plan.DeepPlanError):
             deep_plan._worktrees_root(repository)
+
+    def test_worktree_create_supports_external_root_and_allow_dirty(self) -> None:
+        repository, epic, original_root, original_cwd = self.create_git_epic()
+        try:
+            (repository / "operator-note.txt").write_text("unrelated change\n", encoding="utf-8")
+            external_root = Path(self.temp_dir.name) / "external-worktrees"
+            self.assertEqual(self.run_cli(
+                "worktree-create", "example-epic", "T01", "--parent", "HEAD",
+                "--worktree-root", str(external_root),
+            ), 2)
+            self.assertEqual(self.run_cli(
+                "worktree-create", "example-epic", "T01", "--parent", "HEAD",
+                "--worktree-root", str(external_root), "--allow-dirty",
+            ), 0)
+            state = json.loads((epic / "execution-state.json").read_text(encoding="utf-8"))
+            recorded = Path(state["tasks"]["T01"]["worktree"])
+            self.assertTrue(recorded.is_absolute())
+            self.assertTrue(recorded.is_dir())
+            self.assertEqual(self.run_cli("resume", "example-epic"), 0)
+        finally:
+            self.restore_git_epic(original_root, original_cwd)
+
+    def test_worktree_remove_clears_metadata_and_preserves_target_of_directory_link(self) -> None:
+        repository, epic, original_root, original_cwd = self.create_git_epic()
+        try:
+            self.assertEqual(self.run_cli("worktree-create", "example-epic", "T01", "--parent", "HEAD"), 0)
+            worktree = repository / ".worktrees" / "T01-core"
+            target = Path(self.temp_dir.name) / "linked-target"
+            target.mkdir()
+            marker = target / "keep.txt"
+            marker.write_text("keep\n", encoding="utf-8")
+            link = worktree / "node_modules"
+            try:
+                if os.name == "nt":
+                    junction = subprocess.run(
+                        ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+                    if junction.returncode != 0:
+                        self.skipTest(f"Directory junctions are unavailable: {junction.stderr or junction.stdout}")
+                else:
+                    link.symlink_to(target, target_is_directory=True)
+            except OSError as error:
+                self.skipTest(f"Directory links are unavailable: {error}")
+
+            state_path = epic / "execution-state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"]["T01"]["status"] = "BLOCKED"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            self.assertEqual(self.run_cli(
+                "worktree-remove", "example-epic", "T01", "--delete-branch",
+            ), 0)
+            self.assertFalse(worktree.exists())
+            self.assertTrue(marker.is_file())
+            self.assertEqual(marker.read_text(encoding="utf-8"), "keep\n")
+            state = json.loads((epic / "execution-state.json").read_text(encoding="utf-8"))
+            self.assertNotIn("worktree", state["tasks"]["T01"])
+            self.assertNotIn("branch", state["tasks"]["T01"])
+        finally:
+            self.restore_git_epic(original_root, original_cwd)
+
+    def test_worktree_remove_refuses_dirty_checkout(self) -> None:
+        repository, _epic, original_root, original_cwd = self.create_git_epic()
+        try:
+            self.assertEqual(self.run_cli("worktree-create", "example-epic", "T01", "--parent", "HEAD"), 0)
+            worktree = repository / ".worktrees" / "T01-core"
+            self.assertEqual(self.run_cli("worktree-remove", "example-epic", "T01"), 2)
+            (worktree / "uncommitted.txt").write_text("preserve me\n", encoding="utf-8")
+            state_path = _epic / "execution-state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"]["T01"]["status"] = "BLOCKED"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            self.assertEqual(self.run_cli("worktree-remove", "example-epic", "T01"), 2)
+            self.assertTrue((worktree / "uncommitted.txt").is_file())
+        finally:
+            self.restore_git_epic(original_root, original_cwd)
+
+    def test_worktree_remove_preserves_unmerged_branch_when_deletion_is_requested(self) -> None:
+        repository, epic, original_root, original_cwd = self.create_git_epic()
+        try:
+            self.assertEqual(self.run_cli("worktree-create", "example-epic", "T01", "--parent", "HEAD"), 0)
+            worktree = repository / ".worktrees" / "T01-core"
+            (worktree / "worker.txt").write_text("committed worker result\n", encoding="utf-8")
+            subprocess.run(["git", "add", "worker.txt"], cwd=worktree, check=True)
+            subprocess.run(["git", "commit", "-m", "worker result"], cwd=worktree, check=True, capture_output=True)
+            state_path = epic / "execution-state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"]["T01"]["status"] = "BLOCKED"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            self.assertEqual(self.run_cli(
+                "worktree-remove", "example-epic", "T01", "--delete-branch",
+            ), 2)
+            self.assertFalse(worktree.exists())
+            self.assertEqual(subprocess.run(
+                ["git", "show-ref", "--verify", "--quiet", "refs/heads/task/T01-core"],
+                cwd=repository,
+                check=False,
+            ).returncode, 0)
+            state = json.loads((epic / "execution-state.json").read_text(encoding="utf-8"))
+            self.assertNotIn("worktree", state["tasks"]["T01"])
+            self.assertEqual(state["tasks"]["T01"]["branch"], "task/T01-core")
+        finally:
+            self.restore_git_epic(original_root, original_cwd)
+
+    def test_worktree_cleanup_unblocks_only_after_artifacts_are_reconciled(self) -> None:
+        repository, epic, original_root, original_cwd = self.create_git_epic()
+        try:
+            self.assertEqual(self.run_cli("worktree-create", "example-epic", "T01", "--parent", "HEAD"), 0)
+            state_path = epic / "execution-state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"]["T01"]["status"] = "BLOCKED"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            (epic / "evidence").mkdir(exist_ok=True)
+            (epic / "evidence" / "resolved.md").write_text("Blocker resolved.\n", encoding="utf-8")
+            self.assertEqual(self.run_cli(
+                "unblock", "example-epic", "T01", "--reason", "Retry is safe.",
+                "--evidence", "evidence/resolved.md",
+            ), 2)
+            self.assertEqual(self.run_cli(
+                "worktree-remove", "example-epic", "T01", "--delete-branch",
+            ), 0)
+            self.assertEqual(self.run_cli(
+                "unblock", "example-epic", "T01", "--reason", "Retry is safe.",
+                "--evidence", "evidence/resolved.md",
+            ), 0)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(state["tasks"]["T01"]["status"], "READY_TO_DISPATCH")
+        finally:
+            self.restore_git_epic(original_root, original_cwd)
+
+    def test_worktree_remove_recovers_orphaned_registered_checkout(self) -> None:
+        repository, epic, original_root, original_cwd = self.create_git_epic()
+        try:
+            worktree = Path(self.temp_dir.name) / "orphan-worktrees" / "T01-core"
+            self.assertEqual(subprocess.run(
+                ["git", "worktree", "add", "-b", "task/T01-core", str(worktree), "HEAD"],
+                cwd=repository,
+                check=False,
+                capture_output=True,
+            ).returncode, 0)
+            self.assertEqual(self.run_cli(
+                "worktree-remove", "example-epic", "T01", "--worktree-path", str(worktree), "--delete-branch",
+            ), 0)
+            self.assertFalse(worktree.exists())
+            self.assertNotEqual(subprocess.run(
+                ["git", "show-ref", "--verify", "--quiet", "refs/heads/task/T01-core"],
+                cwd=repository,
+                check=False,
+            ).returncode, 0)
+            state = json.loads((epic / "execution-state.json").read_text(encoding="utf-8"))
+            self.assertNotIn("worktree", state["tasks"]["T01"])
+            self.assertNotIn("branch", state["tasks"]["T01"])
+        finally:
+            self.restore_git_epic(original_root, original_cwd)
+
+    def test_execution_state_mutation_rejects_external_worker_checkout(self) -> None:
+        repository, _epic, original_root, original_cwd = self.create_git_epic()
+        try:
+            external_root = Path(self.temp_dir.name) / "external-checkouts"
+            self.assertEqual(self.run_cli(
+                "worktree-create", "example-epic", "T01", "--parent", "HEAD",
+                "--worktree-root", str(external_root),
+            ), 0)
+            os.chdir(external_root / "T01-core")
+            self.assertEqual(self.run_cli("worktree-remove", "example-epic", "T01"), 2)
+        finally:
+            self.restore_git_epic(original_root, original_cwd)
+
+    def test_worktree_prune_defaults_to_dry_run_and_removes_completed_worktree(self) -> None:
+        repository, epic, original_root, original_cwd = self.create_git_epic()
+        try:
+            self.assertEqual(self.run_cli("worktree-create", "example-epic", "T01", "--parent", "HEAD"), 0)
+            worktree = repository / ".worktrees" / "T01-core"
+            state_path = epic / "execution-state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"]["T01"]["status"] = "COMPLETED"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            self.assertEqual(self.run_cli("worktree-prune", "example-epic"), 0)
+            self.assertTrue(worktree.is_dir())
+            self.assertEqual(self.run_cli("worktree-prune", "example-epic", "--apply"), 0)
+            self.assertFalse(worktree.exists())
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertNotIn("worktree", state["tasks"]["T01"])
+            self.assertEqual(state["tasks"]["T01"]["branch"], "task/T01-core")
+        finally:
+            self.restore_git_epic(original_root, original_cwd)
+
+    def test_install_deps_without_lockfile_rolls_back_new_worktree(self) -> None:
+        repository, epic, original_root, original_cwd = self.create_git_epic()
+        try:
+            self.assertEqual(self.run_cli(
+                "worktree-create", "example-epic", "T01", "--parent", "HEAD", "--install-deps",
+            ), 2)
+            self.assertFalse((repository / ".worktrees" / "T01-core").exists())
+            self.assertNotEqual(subprocess.run(
+                ["git", "show-ref", "--verify", "--quiet", "refs/heads/task/T01-core"],
+                cwd=repository,
+                check=False,
+            ).returncode, 0)
+            state = json.loads((epic / "execution-state.json").read_text(encoding="utf-8"))
+            self.assertNotIn("worktree", state["tasks"]["T01"])
+        finally:
+            self.restore_git_epic(original_root, original_cwd)
+
+    def test_dependency_install_command_requires_one_recognized_lockfile(self) -> None:
+        directory = Path(self.temp_dir.name) / "package-locks"
+        directory.mkdir()
+        (directory / "pnpm-lock.yaml").write_text("lockfileVersion: '9.0'\n", encoding="utf-8")
+        self.assertEqual(
+            deep_plan._dependency_install_command(directory),
+            ["pnpm", "install", "--frozen-lockfile"],
+        )
+        (directory / "package-lock.json").write_text("{}\n", encoding="utf-8")
+        with self.assertRaises(deep_plan.DeepPlanError):
+            deep_plan._dependency_install_command(directory)
 
     def test_unblock_requires_resolution_evidence_and_reopens_blocked_task(self) -> None:
         self.assertEqual(self.run_cli("init", "example-epic"), 0)
